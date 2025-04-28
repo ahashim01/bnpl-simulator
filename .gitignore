@@ -18,3 +18,7 @@ node_modules/
 
 # Databases & tooling
 *.sqlite3
+
+# IDEs
+.idea/
+.vscode/
