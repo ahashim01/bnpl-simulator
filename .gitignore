@@ -22,3 +22,6 @@ node_modules/
 # IDEs
 .idea/
 .vscode/
+
+# static files
+staticfiles/
