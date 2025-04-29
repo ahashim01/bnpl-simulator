@@ -27,9 +27,7 @@ class PaymentPlan(models.Model):
     )
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
     start_date = models.DateField()
-    status = models.CharField(
-        max_length=1, choices=Status.choices, default=Status.PENDING
-    )
+    status = models.CharField(max_length=1, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -51,22 +49,16 @@ class PaymentPlan(models.Model):
             for idx in range(1, count + 1):
                 amount = tranche if idx < count else self.total_amount - accumulated
                 due = self.start_date + relativedelta(months=idx - 1)
-                Installment.objects.create(
-                    plan=self, sequence=idx, amount=amount, due_date=due
-                )
+                Installment.objects.create(plan=self, sequence=idx, amount=amount, due_date=due)
                 accumulated += amount
 
 
 class Installment(models.Model):
-    plan = models.ForeignKey(
-        PaymentPlan, on_delete=models.CASCADE, related_name="installments"
-    )
+    plan = models.ForeignKey(PaymentPlan, on_delete=models.CASCADE, related_name="installments")
     sequence = models.PositiveSmallIntegerField()  # 1-based order
     due_date = models.DateField()
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    status = models.CharField(
-        max_length=1, choices=Status.choices, default=Status.PENDING
-    )
+    status = models.CharField(max_length=1, choices=Status.choices, default=Status.PENDING)
     paid_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

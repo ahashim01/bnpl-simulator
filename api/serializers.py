@@ -14,9 +14,7 @@ class PaymentPlanCreateSerializer(serializers.Serializer):
     total_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     start_date = serializers.DateField()
     installments = serializers.IntegerField(min_value=1)
-    customer_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(is_merchant=False)
-    )
+    customer_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.filter(is_merchant=False))
 
     def create(self, validated):
         merchant = self.context["request"].user

@@ -11,9 +11,7 @@ def update_plan_on_paid(sender, instance: Installment, **kwargs):
 
     plan = instance.plan
     # any unpaid or late installments left?
-    remaining = plan.installments.filter(
-        status__in=[Status.PENDING, Status.LATE]
-    ).exists()
+    remaining = plan.installments.filter(status__in=[Status.PENDING, Status.LATE]).exists()
     if not remaining:
         plan.status = Status.PAID
         plan.save(update_fields=["status"])
