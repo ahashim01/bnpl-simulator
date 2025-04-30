@@ -1,7 +1,8 @@
 import {
     Container, Typography, Paper, Stack, TextField, Button, Card, CardContent, Grid, Box,
     Divider, Tab, Tabs, Alert, IconButton, Tooltip, useTheme, Chip, Fade,
-    Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment
+    Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment, CircularProgress,
+    FormControl, InputLabel, FilledInput, FormHelperText, Autocomplete
   } from "@mui/material";
   import dayjs from "dayjs";
   import { useState, SyntheticEvent } from "react";
@@ -17,6 +18,10 @@ import {
   import PendingIcon from '@mui/icons-material/Pending';
   import DoneIcon from '@mui/icons-material/Done';
   import WarningIcon from '@mui/icons-material/Warning';
+  import EmailIcon from '@mui/icons-material/Email';
+  import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+  import PaymentIcon from '@mui/icons-material/Payment';
+  import PersonIcon from '@mui/icons-material/Person';
   import { styled } from '@mui/material/styles';
   import { useAuth } from "../hooks/AuthContext";
 
@@ -40,6 +45,25 @@ import {
     marginBottom: theme.spacing(1),
   }));
 
+  const FormField = styled(FormControl)(({ theme }) => ({
+    marginBottom: theme.spacing(3),
+    '& .MuiInputLabel-root': {
+      color: theme.palette.text.secondary,
+    },
+    '& .MuiFilledInput-root': {
+      borderRadius: theme.shape.borderRadius,
+      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.04)',
+      transition: theme.transitions.create(['background-color', 'box-shadow']),
+      '&:hover': {
+        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.13)' : 'rgba(0, 0, 0, 0.06)',
+      },
+      '&.Mui-focused': {
+        boxShadow: `0 0 0 2px ${theme.palette.primary.light}`,
+        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.13)' : 'rgba(0, 0, 0, 0.06)',
+      }
+    }
+  }));
+
   export default function MerchantDashboard() {
     const theme = useTheme();
     const { user } = useAuth();
@@ -49,9 +73,16 @@ import {
       total_amount: "",
       start_date: dayjs().format("YYYY-MM-DD"),
       installments: 4,
-      customer_id: "",
+      customer_email: "",
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+    // Fetch customers for the dropdown
+    const { data: customers = [] } = useQuery({
+      queryKey: ["customers"],
+      queryFn: () => api.get("/api/customers/").then(r => r.data).catch(() => []),
+      // If API endpoint doesn't exist yet, silently fail and use empty array
+    });
 
     const { data: plans = [], refetch, isLoading, error } = useQuery({
       queryKey: ["plans"],
@@ -84,7 +115,7 @@ import {
         total_amount: "",
         start_date: dayjs().format("YYYY-MM-DD"),
         installments: 4,
-        customer_id: "",
+        customer_email: "",
       });
       setFormErrors({});
     };
@@ -98,8 +129,10 @@ import {
         errors.total_amount = "Must be a positive number";
       }
 
-      if (!form.customer_id) {
-        errors.customer_id = "Customer ID is required";
+      if (!form.customer_email) {
+        errors.customer_email = "Customer email is required";
+      } else if (!/\S+@\S+\.\S+/.test(form.customer_email)) {
+        errors.customer_email = "Email address is invalid";
       }
 
       if (!form.installments || Number(form.installments) < 1) {
@@ -322,8 +355,13 @@ import {
                         <Typography variant="body1" fontWeight={500}>
                           {p.total_amount} SAR
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Customer ID: {p.customer} • Started: {p.start_date}
+                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                          <PersonIcon fontSize="small" sx={{ mr: 0.5 }} />
+                          Customer: {p.customer?.email || "Unknown"}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                          <CalendarMonthIcon fontSize="small" sx={{ mr: 0.5 }} />
+                          Started: {p.start_date}
                         </Typography>
                       </Box>
                       <Chip
@@ -334,8 +372,8 @@ import {
                     </Box>
 
                     <PlanProgress
-                      paid={p.installments.filter((i:Inst) => i.status === "PAID").length}
-                      total={p.installments.length}
+                      paid={p.paid_installments || p.installments.filter((i:Inst) => i.status === "PAID").length}
+                      total={p.total_installments || p.installments.length}
                     />
 
                     <Divider sx={{ my: 2 }} />
@@ -360,66 +398,98 @@ import {
           onClose={() => setOpenCreateDialog(false)}
           fullWidth
           maxWidth="sm"
+          PaperProps={{
+            elevation: 3,
+            sx: { borderRadius: 2, px: 1 }
+          }}
         >
-          <DialogTitle>Create Payment Plan</DialogTitle>
+          <DialogTitle sx={{ pb: 1, pt: 3 }}>
+            <Typography variant="h5" fontWeight={500}>Create Payment Plan</Typography>
+          </DialogTitle>
+
           <DialogContent>
-            <Box sx={{ pt: 1 }}>
-              <TextField
-                margin="normal"
-                label="Total Amount"
-                fullWidth
-                type="number"
-                value={form.total_amount}
-                onChange={e => setForm({...form, total_amount: e.target.value})}
-                error={!!formErrors.total_amount}
-                helperText={formErrors.total_amount}
-                InputProps={{
-                  endAdornment: <InputAdornment position="end">SAR</InputAdornment>,
-                }}
-              />
+            <Box sx={{ pt: 2 }}>
+              <FormField variant="filled" fullWidth>
+                <InputLabel>Amount</InputLabel>
+                <FilledInput
+                  value={form.total_amount}
+                  onChange={e => setForm({...form, total_amount: e.target.value})}
+                  error={!!formErrors.total_amount}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <PaymentIcon color="action" />
+                    </InputAdornment>
+                  }
+                  endAdornment={<InputAdornment position="end">SAR</InputAdornment>}
+                />
+                {formErrors.total_amount && (
+                  <FormHelperText error>{formErrors.total_amount}</FormHelperText>
+                )}
+              </FormField>
 
-              <TextField
-                margin="normal"
-                label="Start Date"
-                type="date"
-                fullWidth
-                value={form.start_date}
-                onChange={e => setForm({...form, start_date: e.target.value})}
-                error={!!formErrors.start_date}
-                helperText={formErrors.start_date}
-                InputLabelProps={{ shrink: true }}
-              />
+              <FormField variant="filled" fullWidth>
+                <InputLabel shrink>Start Date</InputLabel>
+                <FilledInput
+                  type="date"
+                  value={form.start_date}
+                  onChange={e => setForm({...form, start_date: e.target.value})}
+                  error={!!formErrors.start_date}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <CalendarMonthIcon color="action" />
+                    </InputAdornment>
+                  }
+                />
+                {formErrors.start_date && (
+                  <FormHelperText error>{formErrors.start_date}</FormHelperText>
+                )}
+              </FormField>
 
-              <TextField
-                margin="normal"
-                label="Number of Installments"
-                fullWidth
-                type="number"
-                value={form.installments}
-                onChange={e => setForm({...form, installments: Number(e.target.value)})}
-                error={!!formErrors.installments}
-                helperText={formErrors.installments}
-              />
+              <FormField variant="filled" fullWidth>
+                <InputLabel>Number of Installments</InputLabel>
+                <FilledInput
+                  type="number"
+                  value={form.installments}
+                  onChange={e => setForm({...form, installments: Number(e.target.value)})}
+                  error={!!formErrors.installments}
+                />
+                {formErrors.installments && (
+                  <FormHelperText error>{formErrors.installments}</FormHelperText>
+                )}
+              </FormField>
 
-              <TextField
-                margin="normal"
-                label="Customer ID"
-                fullWidth
-                value={form.customer_id}
-                onChange={e => setForm({...form, customer_id: e.target.value})}
-                error={!!formErrors.customer_id}
-                helperText={formErrors.customer_id || "Enter the ID of the customer for this payment plan"}
-              />
+              <FormField variant="filled" fullWidth>
+                <InputLabel>Customer Email</InputLabel>
+                <FilledInput
+                  value={form.customer_email}
+                  onChange={e => setForm({...form, customer_email: e.target.value})}
+                  error={!!formErrors.customer_email}
+                  type="email"
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <EmailIcon color="action" />
+                    </InputAdornment>
+                  }
+                />
+                {formErrors.customer_email && (
+                  <FormHelperText error>{formErrors.customer_email}</FormHelperText>
+                )}
+                <FormHelperText>Enter the email address of an existing customer</FormHelperText>
+              </FormField>
             </Box>
           </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenCreateDialog(false)}>Cancel</Button>
+
+          <DialogActions sx={{ px: 3, pb: 3, pt: 1 }}>
+            <Button onClick={() => setOpenCreateDialog(false)} sx={{ mr: 1 }}>
+              Cancel
+            </Button>
             <Button
               variant="contained"
               onClick={handleCreatePlan}
               disabled={create.isPending}
+              startIcon={create.isPending ? <CircularProgress size={16} color="inherit" /> : <AddIcon />}
             >
-              Create Plan
+              {create.isPending ? "Creating..." : "Create Plan"}
             </Button>
           </DialogActions>
         </Dialog>
