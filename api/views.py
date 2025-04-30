@@ -66,7 +66,7 @@ class CustomerListView(generics.ListAPIView):
 class PaymentPlanViewSet(
     mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
 ):
-    permission_classes = (IsMerchantOrOwner,)
+    permission_classes = (IsAuthenticated, IsMerchantOrOwner)
 
     def get_serializer_class(self):
         if self.action == "create":

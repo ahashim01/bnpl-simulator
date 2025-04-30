@@ -25,3 +25,4 @@ node_modules/
 
 # static files
 staticfiles/
+.coverage
