@@ -55,16 +55,22 @@ class RegisterView(generics.CreateAPIView):
 
     class Serializer(serializers.ModelSerializer):
         password = serializers.CharField(write_only=True)
+        email = serializers.EmailField(required=True)
 
         class Meta:
             model = User
-            fields = ("username", "password", "is_merchant")
+            fields = ("username", "email", "password", "first_name", "last_name", "is_merchant")
 
         def validate_password(self, value):
             validate_password(value)
             return value
 
-        def create(self, val):
-            return User.objects.create_user(**val)
+        def validate_email(self, value):
+            if User.objects.filter(email=value).exists():
+                raise serializers.ValidationError("A user with this email already exists.")
+            return value
+
+        def create(self, validated_data):
+            return User.objects.create_user(**validated_data)
 
     serializer_class = Serializer
