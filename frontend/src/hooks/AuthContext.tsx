@@ -1,113 +1,120 @@
 import {
-    createContext,
-    useContext,
-    useState,
-    ReactNode,
-    useCallback,
-    useMemo,
-    useEffect
-  } from "react";
-  import { jwtDecode } from "jwt-decode";
-  import api from "../services/api";
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useCallback,
+  useMemo,
+  useEffect
+} from "react";
+import { jwtDecode } from "jwt-decode";
+import apiService from "../services/api";
+import { LoginRequest, User } from "../types/api";
 
-  interface JwtPayload {
-    user_id: number;
-    is_merchant: boolean;
-    username?: string;
-    exp: number;
-    iat: number;
-  }
+interface JwtPayload {
+  user_id: number;
+  is_merchant: boolean;
+  username?: string;
+  exp: number;
+  iat: number;
+}
 
-  // Add interface for transformed user data with camelCase property names
-  interface UserData {
-    userId: number;
-    isMerchant: boolean;
-    username?: string;
-    exp: number;
-    iat: number;
-  }
+interface AuthContextType {
+  user: User | null;
+  login(username: string, password: string): Promise<void>;
+  logout(): void;
+  isLoading: boolean;
+  error: string | null;
+}
 
-  interface Ctx {
-    user: UserData | null;
-    login(username: string, password: string): Promise<void>;
-    logout(): void;
-  }
+const AuthContext = createContext<AuthContextType>(null as never);
 
-  const AuthCtx = createContext<Ctx>(null as never);
-
-  // Helper function to transform JWT payload to camelCase properties
-  const transformUserData = (payload: JwtPayload): UserData => {
-    // Ensure is_merchant is correctly interpreted as a boolean
-    const isMerchant = payload.is_merchant === true ||
-                      payload.is_merchant === "true" ||
-                      payload.is_merchant === 1;
-
-    console.log("JWT payload:", payload);
-    console.log("is_merchant value:", payload.is_merchant, "type:", typeof payload.is_merchant);
-
-    return {
-      userId: payload.user_id,
-      isMerchant: isMerchant,
-      username: payload.username,
-      exp: payload.exp,
-      iat: payload.iat
-    };
+// Helper function to transform JWT payload to User object
+const transformUserData = (payload: JwtPayload): User => {
+  return {
+    id: payload.user_id,
+    username: payload.username ?? '',
+    email: '',  // Email is not included in the token
+    isMerchant: payload.is_merchant === true
   };
+};
 
-  export default function AuthProvider({ children }: { readonly children: ReactNode }) {
-    const [user, setUser] = useState<UserData | null>(() => {
+export default function AuthProvider({ children }: { readonly children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize user from token in localStorage
+  useEffect(() => {
+    const initializeAuth = () => {
       const token = localStorage.getItem("access");
       if (token) {
         try {
-          const payload = jwtDecode(token) as JwtPayload;
-          return transformUserData(payload);
+          const payload = jwtDecode<JwtPayload>(token);
+
+          // Check if token is expired
+          const currentTime = Date.now() / 1000;
+          if (payload.exp < currentTime) {
+            localStorage.removeItem("access");
+            localStorage.removeItem("refresh");
+            return null;
+          }
+
+          setUser(transformUserData(payload));
         } catch (error) {
           console.error("Error decoding token:", error);
           localStorage.removeItem("access");
           localStorage.removeItem("refresh");
-          return null;
         }
       }
-      return null;
-    });
+      setIsLoading(false);
+    };
 
-    const login = useCallback(async (username: string, password: string) => {
-      try {
-        const { data } = await api.post("/token/", { username, password });
-        localStorage.setItem("access", data.access);
-        localStorage.setItem("refresh", data.refresh);
+    initializeAuth();
+  }, []);
 
-        const payload = jwtDecode(data.access) as JwtPayload;
-        const userData = transformUserData(payload);
-        console.log("Logging in user:", userData);
-        setUser(userData);
-      } catch (error) {
-        console.error("Login error:", error);
-        throw error;
-      }
-    }, []);
+  const login = useCallback(async (username: string, password: string) => {
+    setIsLoading(true);
+    setError(null);
 
-    const logout = useCallback(() => {
-      localStorage.clear();
-      setUser(null);
-    }, []);
+    try {
+      const loginRequest: LoginRequest = { username, password };
+      const { access, refresh } = await apiService.login(loginRequest);
 
-    // This effect will help debug auth issues
-    useEffect(() => {
-      if (user) {
-        console.log("Current authenticated user:", user);
-      }
-    }, [user]);
+      localStorage.setItem("access", access);
+      localStorage.setItem("refresh", refresh);
 
-    const contextValue = useMemo(() => ({ user, login, logout }), [user, login, logout]);
+      const payload = jwtDecode<JwtPayload>(access);
+      const userData = transformUserData(payload);
 
-    return (
-      <AuthCtx.Provider value={contextValue}>
-        {children}
-      </AuthCtx.Provider>
-    );
-  }
+      setUser(userData);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setError(error.response?.data?.detail || "Authentication failed");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  export function useAuth() {
-    return useContext(AuthCtx);
-  }
+  const logout = useCallback(() => {
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
+    setUser(null);
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({ user, login, logout, isLoading, error }),
+    [user, login, logout, isLoading, error]
+  );
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
