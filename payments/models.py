@@ -64,6 +64,11 @@ class Installment(models.Model):
     class Meta:
         unique_together = [("plan", "sequence")]
         ordering = ["sequence"]
+        # Add composite index for common filtered queries
+        indexes = [
+            models.Index(fields=["plan", "status"]),
+            models.Index(fields=["status", "due_date"]),  # For payment reminders query
+        ]
 
     def __str__(self):
         return f"Inst {self.sequence} • Plan {self.plan_id} • {self.amount} SAR"
