@@ -22,7 +22,7 @@ A Buy Now, Pay Later (BNPL) payment system that allows merchants to offer instal
 
 1. Clone the repository:
    ```bash
-    git clone https://github.com/yourusername/bnpl-simulator.git
+    git clone git@github.com:ahashim01/bnpl-simulator.git
     cd bnpl-simulator
     ```
 
