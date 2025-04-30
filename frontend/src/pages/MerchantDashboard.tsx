@@ -25,6 +25,20 @@ import {
   import { styled } from '@mui/material/styles';
   import { useAuth } from "../hooks/AuthContext";
 
+  // Status code to display text mapping
+  const STATUS_MAP: Record<string, string> = {
+    "P": "In Progress", // Changed from "Pending" to "In Progress" for plans
+    "D": "Paid",
+    "L": "Late"
+  };
+
+  // Status code to chip color mapping
+  const STATUS_COLOR_MAP: Record<string, "success" | "warning" | "primary" | "error"> = {
+    "P": "primary",
+    "D": "success",
+    "L": "error"
+  };
+
   // Enhanced styled components for better visuals
   const StatsCard = styled(Card)(({ theme }) => ({
     height: '100%',
@@ -164,29 +178,29 @@ import {
 
     // Analytics calculations
     const totalRevenue = plans.reduce((a:any, p:any) => a + parseFloat(p.total_amount), 0);
-    const paidRevenue = plans.filter((p:any) => p.status === "PAID")
+    const paidRevenue = plans.filter((p:any) => p.status === "D")
                             .reduce((a:any, p:any) => a + parseFloat(p.total_amount), 0);
     const pendingRevenue = totalRevenue - paidRevenue;
 
     // Count plans by status
     const totalPlans = plans.length;
-    const activePlans = plans.filter((p:any) => p.status === "PENDING").length;
-    const completedPlans = plans.filter((p:any) => p.status === "PAID").length;
+    const activePlans = plans.filter((p:any) => p.status === "P").length;
+    const completedPlans = plans.filter((p:any) => p.status === "D").length;
 
     // Calculate success rate
     const successRate = totalPlans ? ((completedPlans / totalPlans) * 100).toFixed(1) : "0";
 
     // Get overdue installments
     const overdueInstallments = plans.flatMap((p:any) =>
-      p.installments.filter((i:Inst) => i.status === "LATE")
+      p.installments.filter((i:Inst) => i.status === "L")
     ).length;
 
     // Filter plans by status based on active tab
     const filteredPlans = tabValue === 0
       ? plans
       : tabValue === 1
-        ? plans.filter((p:any) => p.status === "PENDING")
-        : plans.filter((p:any) => p.status === "PAID");
+        ? plans.filter((p:any) => p.status === "P")
+        : plans.filter((p:any) => p.status === "D");
 
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -374,8 +388,8 @@ import {
                         </Typography>
                       </Box>
                       <Chip
-                        label={p.status}
-                        color={p.status === "PAID" ? "success" : "primary"}
+                        label={STATUS_MAP[p.status] || p.status}
+                        color={STATUS_COLOR_MAP[p.status] || "default"}
                         variant="outlined"
                       />
                     </Box>

@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from accounts.models import User
 from payments.models import Installment, PaymentPlan, Status
 
-from .permissions import IsMerchantOrOwner
+from .permissions import CanPayInstallment, IsMerchantOrOwner
 from .serializers import (
     CustomerSerializer,
     InstallmentSerializer,
@@ -73,7 +73,7 @@ class PaymentPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewset
 class InstallmentPayView(viewsets.GenericViewSet, mixins.UpdateModelMixin):
     queryset = Installment.objects.all()
     serializer_class = InstallmentSerializer
-    permission_classes = (IsMerchantOrOwner,)
+    permission_classes = (CanPayInstallment,)  # Use our new permission class
 
     @action(detail=True, methods=["post"])
     def pay(self, request, pk=None):
