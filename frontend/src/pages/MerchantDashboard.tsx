@@ -1,30 +1,124 @@
 import {
     Container, Typography, Paper, Stack, TextField, Button, Card, CardContent, Grid, Box,
+    Divider, Tab, Tabs, Alert, IconButton, Tooltip, useTheme, Chip, Fade,
+    Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment
   } from "@mui/material";
   import dayjs from "dayjs";
-  import { useState } from "react";
+  import { useState, SyntheticEvent } from "react";
   import { useQuery, useMutation } from "@tanstack/react-query";
   import api from "../services/api";
   import { InstallmentRow, Inst } from "../components/molecules/InstallmentRow";
   import PlanProgress from "../components/atoms/Progress";
+  import AddIcon from '@mui/icons-material/Add';
+  import RefreshIcon from '@mui/icons-material/Refresh';
+  import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
+  import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+  import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
+  import PendingIcon from '@mui/icons-material/Pending';
+  import DoneIcon from '@mui/icons-material/Done';
+  import WarningIcon from '@mui/icons-material/Warning';
+  import { styled } from '@mui/material/styles';
+  import { useAuth } from "../hooks/AuthContext";
+
+  // Styled components for better design consistency
+  const StatsCard = styled(Card)(({ theme }) => ({
+    height: '100%',
+    transition: 'transform 0.3s, box-shadow 0.3s',
+    '&:hover': {
+      transform: 'translateY(-5px)',
+      boxShadow: theme.shadows[4],
+    },
+  }));
+
+  const IconContainer = styled(Box)(({ theme }) => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: '50%',
+    marginBottom: theme.spacing(1),
+  }));
 
   export default function MerchantDashboard() {
+    const theme = useTheme();
+    const { user } = useAuth();
+    const [tabValue, setTabValue] = useState(0);
+    const [openCreateDialog, setOpenCreateDialog] = useState(false);
     const [form, setForm] = useState({
       total_amount: "",
       start_date: dayjs().format("YYYY-MM-DD"),
       installments: 4,
       customer_id: "",
     });
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-    const { data: plans = [], refetch } = useQuery({
+    const { data: plans = [], refetch, isLoading, error } = useQuery({
       queryKey: ["plans"],
       queryFn: () => api.get("/plans/").then(r => r.data),
     });
 
     const create = useMutation({
       mutationFn: () => api.post("/plans/", form),
-      onSuccess: () => refetch(),
+      onSuccess: () => {
+        refetch();
+        setOpenCreateDialog(false);
+        resetForm();
+      },
+      onError: (error: any) => {
+        const errorData = error.response?.data || {};
+        const newErrors: Record<string, string> = {};
+
+        Object.keys(errorData).forEach(key => {
+          newErrors[key] = Array.isArray(errorData[key])
+            ? errorData[key].join(', ')
+            : String(errorData[key]);
+        });
+
+        setFormErrors(newErrors);
+      }
     });
+
+    const resetForm = () => {
+      setForm({
+        total_amount: "",
+        start_date: dayjs().format("YYYY-MM-DD"),
+        installments: 4,
+        customer_id: "",
+      });
+      setFormErrors({});
+    };
+
+    const validateForm = () => {
+      const errors: Record<string, string> = {};
+
+      if (!form.total_amount) {
+        errors.total_amount = "Total amount is required";
+      } else if (isNaN(Number(form.total_amount)) || Number(form.total_amount) <= 0) {
+        errors.total_amount = "Must be a positive number";
+      }
+
+      if (!form.customer_id) {
+        errors.customer_id = "Customer ID is required";
+      }
+
+      if (!form.installments || Number(form.installments) < 1) {
+        errors.installments = "At least 1 installment required";
+      }
+
+      setFormErrors(errors);
+      return Object.keys(errors).length === 0;
+    };
+
+    const handleCreatePlan = () => {
+      if (validateForm()) {
+        create.mutate();
+      }
+    };
+
+    const handleTabChange = (event: SyntheticEvent, newValue: number) => {
+      setTabValue(newValue);
+    };
 
     // Analytics calculations
     const totalRevenue = plans.reduce((a:any, p:any) => a + parseFloat(p.total_amount), 0);
@@ -45,97 +139,290 @@ import {
       p.installments.filter((i:Inst) => i.status === "LATE")
     ).length;
 
+    // Filter plans by status based on active tab
+    const filteredPlans = tabValue === 0
+      ? plans
+      : tabValue === 1
+        ? plans.filter((p:any) => p.status === "PENDING")
+        : plans.filter((p:any) => p.status === "PAID");
+
     return (
-      <Container sx={{ py: 4 }}>
-        <Paper sx={{ p:2, mb:4 }}>
-          <Typography variant="h5" gutterBottom>Create Plan</Typography>
-          <Stack direction="row" spacing={2}>
-            {(["total_amount","start_date","installments","customer_id"] as const).map(f=>(
-              <TextField key={f} label={f} type={f==="start_date"?"date":"text"}
-                value={(form as any)[f]}
-                onChange={e=>setForm({...form,[f]:e.target.value})}
-                InputLabelProps={{shrink:true}}/>
-            ))}
-            <Button variant="contained" onClick={()=>create.mutate()} disabled={create.isPending}>Create</Button>
-          </Stack>
-        </Paper>
-
-        <Typography variant="h5" gutterBottom>Analytics Dashboard</Typography>
-        <Grid container spacing={2} sx={{ mb:4 }}>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">Total Revenue</Typography>
-                <Typography variant="h5">{totalRevenue.toFixed(2)} SAR</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">Collected Revenue</Typography>
-                <Typography variant="h5">{paidRevenue.toFixed(2)} SAR</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">Pending Revenue</Typography>
-                <Typography variant="h5">{pendingRevenue.toFixed(2)} SAR</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">Success Rate</Typography>
-                <Typography variant="h5">{successRate}%</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={2} sx={{ mb:4 }}>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">Total Plans</Typography>
-                <Typography variant="h5">{totalPlans}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">Active Plans</Typography>
-                <Typography variant="h5">{activePlans}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle2" color="text.secondary">Overdue Installments</Typography>
-                <Typography variant="h5" color="error">{overdueInstallments}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-
-        <Typography variant="h5" gutterBottom>Payment Plans</Typography>
-        {plans.map((p:any)=>(
-          <Paper key={p.id} sx={{ p:2, mb:2 }}>
-            <Typography variant="h6">Plan #{p.id} – {p.total_amount} SAR</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Customer ID: {p.customer} • Started: {p.start_date}
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        {/* Header section with greeting */}
+        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h4" gutterBottom fontWeight="500">
+              Merchant Dashboard
             </Typography>
-            <PlanProgress
-              paid={p.installments.filter((i:Inst)=>i.status==="PAID").length}
-              total={p.installments.length}/>
-            {p.installments.map((i:Inst)=><InstallmentRow key={i.id} inst={i}/>)}
-          </Paper>
-        ))}
+            <Typography variant="body1" color="text.secondary">
+              Welcome back{user?.username ? `, ${user.username}` : ''}! Here's an overview of your payment plans.
+            </Typography>
+          </Box>
+          <Box>
+            <Tooltip title="Refresh data">
+              <IconButton onClick={() => refetch()} color="primary" sx={{ mr: 1 }}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => setOpenCreateDialog(true)}
+            >
+              Create New Plan
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Error display */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            Error loading data. Please try refreshing.
+          </Alert>
+        )}
+
+        {/* Analytics Cards */}
+        <Typography variant="h5" sx={{ mb: 2, fontWeight: 500 }}>
+          Business Analytics
+        </Typography>
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} md={3}>
+            <StatsCard>
+              <CardContent>
+                <IconContainer sx={{ bgcolor: 'primary.light' }}>
+                  <CurrencyExchangeIcon sx={{ color: 'primary.main' }} />
+                </IconContainer>
+                <Typography variant="subtitle2" color="text.secondary">Total Revenue</Typography>
+                <Typography variant="h4">{totalRevenue.toFixed(2)} SAR</Typography>
+              </CardContent>
+            </StatsCard>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <StatsCard>
+              <CardContent>
+                <IconContainer sx={{ bgcolor: 'success.light' }}>
+                  <AccountBalanceIcon sx={{ color: 'success.main' }} />
+                </IconContainer>
+                <Typography variant="subtitle2" color="text.secondary">Collected Revenue</Typography>
+                <Typography variant="h4">{paidRevenue.toFixed(2)} SAR</Typography>
+              </CardContent>
+            </StatsCard>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <StatsCard>
+              <CardContent>
+                <IconContainer sx={{ bgcolor: 'info.light' }}>
+                  <PendingIcon sx={{ color: 'info.main' }} />
+                </IconContainer>
+                <Typography variant="subtitle2" color="text.secondary">Pending Revenue</Typography>
+                <Typography variant="h4">{pendingRevenue.toFixed(2)} SAR</Typography>
+              </CardContent>
+            </StatsCard>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <StatsCard>
+              <CardContent>
+                <IconContainer sx={{ bgcolor: 'success.light' }}>
+                  <TrendingUpIcon sx={{ color: 'success.main' }} />
+                </IconContainer>
+                <Typography variant="subtitle2" color="text.secondary">Success Rate</Typography>
+                <Typography variant="h4">{successRate}%</Typography>
+              </CardContent>
+            </StatsCard>
+          </Grid>
+        </Grid>
+
+        <Grid container spacing={3} sx={{ mb: 5 }}>
+          <Grid item xs={12} md={4}>
+            <StatsCard>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <IconContainer sx={{ bgcolor: 'primary.light', mr: 2 }}>
+                    <DoneIcon sx={{ color: 'primary.main' }} />
+                  </IconContainer>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">Total Plans</Typography>
+                    <Typography variant="h4">{totalPlans}</Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </StatsCard>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <StatsCard>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <IconContainer sx={{ bgcolor: 'info.light', mr: 2 }}>
+                    <PendingIcon sx={{ color: 'info.main' }} />
+                  </IconContainer>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">Active Plans</Typography>
+                    <Typography variant="h4">{activePlans}</Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </StatsCard>
+          </Grid>
+          <Grid item xs={12} md={4}>
+            <StatsCard>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <IconContainer sx={{ bgcolor: 'error.light', mr: 2 }}>
+                    <WarningIcon sx={{ color: 'error.main' }} />
+                  </IconContainer>
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary">Overdue Installments</Typography>
+                    <Typography variant="h4" color="error">{overdueInstallments}</Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </StatsCard>
+          </Grid>
+        </Grid>
+
+        {/* Payment Plans Section with Tabs */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" sx={{ mb: 2, fontWeight: 500 }}>Payment Plans</Typography>
+          <Tabs
+            value={tabValue}
+            onChange={handleTabChange}
+            sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
+          >
+            <Tab label="All Plans" />
+            <Tab label={`Active (${activePlans})`} />
+            <Tab label={`Completed (${completedPlans})`} />
+          </Tabs>
+
+          {isLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : filteredPlans.length === 0 ? (
+            <Paper sx={{ p: 4, textAlign: 'center' }}>
+              <Typography variant="body1" color="text.secondary">
+                No payment plans found in this category.
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setOpenCreateDialog(true)}
+                sx={{ mt: 2 }}
+              >
+                Create New Plan
+              </Button>
+            </Paper>
+          ) : (
+            <Fade in={!isLoading}>
+              <Box>
+                {filteredPlans.map((p:any) => (
+                  <Paper key={p.id} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                      <Box>
+                        <Typography variant="h6">Plan #{p.id}</Typography>
+                        <Typography variant="body1" fontWeight={500}>
+                          {p.total_amount} SAR
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Customer ID: {p.customer} • Started: {p.start_date}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={p.status}
+                        color={p.status === "PAID" ? "success" : "primary"}
+                        variant="outlined"
+                      />
+                    </Box>
+
+                    <PlanProgress
+                      paid={p.installments.filter((i:Inst) => i.status === "PAID").length}
+                      total={p.installments.length}
+                    />
+
+                    <Divider sx={{ my: 2 }} />
+
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
+                      Installments
+                    </Typography>
+
+                    {p.installments.map((i:Inst) => (
+                      <InstallmentRow key={i.id} inst={i} />
+                    ))}
+                  </Paper>
+                ))}
+              </Box>
+            </Fade>
+          )}
+        </Box>
+
+        {/* Create Plan Dialog */}
+        <Dialog
+          open={openCreateDialog}
+          onClose={() => setOpenCreateDialog(false)}
+          fullWidth
+          maxWidth="sm"
+        >
+          <DialogTitle>Create Payment Plan</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 1 }}>
+              <TextField
+                margin="normal"
+                label="Total Amount"
+                fullWidth
+                type="number"
+                value={form.total_amount}
+                onChange={e => setForm({...form, total_amount: e.target.value})}
+                error={!!formErrors.total_amount}
+                helperText={formErrors.total_amount}
+                InputProps={{
+                  endAdornment: <InputAdornment position="end">SAR</InputAdornment>,
+                }}
+              />
+
+              <TextField
+                margin="normal"
+                label="Start Date"
+                type="date"
+                fullWidth
+                value={form.start_date}
+                onChange={e => setForm({...form, start_date: e.target.value})}
+                error={!!formErrors.start_date}
+                helperText={formErrors.start_date}
+                InputLabelProps={{ shrink: true }}
+              />
+
+              <TextField
+                margin="normal"
+                label="Number of Installments"
+                fullWidth
+                type="number"
+                value={form.installments}
+                onChange={e => setForm({...form, installments: Number(e.target.value)})}
+                error={!!formErrors.installments}
+                helperText={formErrors.installments}
+              />
+
+              <TextField
+                margin="normal"
+                label="Customer ID"
+                fullWidth
+                value={form.customer_id}
+                onChange={e => setForm({...form, customer_id: e.target.value})}
+                error={!!formErrors.customer_id}
+                helperText={formErrors.customer_id || "Enter the ID of the customer for this payment plan"}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenCreateDialog(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={handleCreatePlan}
+              disabled={create.isPending}
+            >
+              Create Plan
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     );
   }

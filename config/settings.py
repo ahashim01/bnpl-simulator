@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ["SECRET_KEY"]
@@ -136,4 +135,12 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_USE": True,
+    # Add custom user claims to JWT token
+    "USER_ID_CLAIM": "user_id",
+    "USER_ID_FIELD": "id",
+    "UPDATE_LAST_LOGIN": False,
+    # Add our custom payload handler
+    "USER_AUTHENTICATION_RULE": "accounts.jwt_auth.custom_user_authentication_rule",
+    # Include username in the token
+    "TOKEN_OBTAIN_SERIALIZER": "accounts.jwt_auth.CustomTokenObtainPairSerializer",
 }
