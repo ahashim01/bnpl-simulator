@@ -1,5 +1,6 @@
 import { useState, ChangeEvent } from "react";
 import { z } from 'zod';
+import { useToast } from "../components/molecules/ToastContainer";
 
 type FormErrors<T> = {
   [K in keyof T]?: string;
@@ -9,6 +10,8 @@ interface UseFormOptions<T, S extends z.ZodType<any, any>> {
   initialValues: T;
   validationSchema?: S;
   onSubmit: (values: z.infer<S>) => Promise<void> | void;
+  successMessage?: string;
+  errorMessage?: string;
 }
 
 export function useForm<
@@ -18,11 +21,14 @@ export function useForm<
   initialValues,
   validationSchema,
   onSubmit,
+  successMessage,
+  errorMessage = "There was an error processing your request",
 }: UseFormOptions<T, S>) {
   const [values, setValues] = useState<T>(initialValues);
   const [errors, setErrors] = useState<FormErrors<T>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const toast = useToast();
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -37,11 +43,11 @@ export function useForm<
       newValue = (e.target as HTMLInputElement).checked;
     }
 
-    setValues((prev: T) => ({ ...prev, [name]: newValue }));
+    setValues(prev => ({ ...prev, [name]: newValue }));
 
     // Clear field error when value changes
     if (errors[name as keyof T]) {
-      setErrors((prev: FormErrors<T>) => {
+      setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[name as keyof T];
         return newErrors;
@@ -58,7 +64,7 @@ export function useForm<
       const newErrors: FormErrors<T> = {};
 
       // Convert Zod errors to our format
-      result.error.errors.forEach((err: any) => {
+      result.error.errors.forEach(err => {
         const path = err.path[0] as keyof T;
         newErrors[path] = err.message;
       });
@@ -76,13 +82,29 @@ export function useForm<
     setHasSubmitted(true);
 
     // Run validation
-    if (!validate()) return;
+    if (!validate()) {
+      // Show toast for validation errors
+      toast.showToast({
+        type: "warning",
+        message: "Validation Error",
+        description: "Please check the form for errors and try again.",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
       // Type assertion is safe because we've validated with the schema
       await onSubmit(values as z.infer<S>);
+
+      // Show success message if provided
+      if (successMessage) {
+        toast.showToast({
+          type: "success",
+          message: successMessage,
+        });
+      }
     } catch (error: any) {
       // Handle API errors
       if (error.response?.data) {
@@ -97,6 +119,20 @@ export function useForm<
         });
 
         setErrors(apiErrors);
+
+        // Show error toast
+        toast.showToast({
+          type: "error",
+          message: errorMessage,
+          description: Object.values(apiErrors).join(" "),
+        });
+      } else {
+        // Show generic error
+        toast.showToast({
+          type: "error",
+          message: errorMessage,
+          description: error.message || "An unexpected error occurred",
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -118,9 +154,7 @@ export function useForm<
     handleSubmit,
     setValues,
     setFieldValue: (name: keyof T, value: any) => {
-      setValues((prev: T) => ({ ...prev, [name]: value }));
-
-      // Clear field error when value changes
+      setValues(prev => ({ ...prev, [name]: value }));
       if (errors[name]) {
         setErrors(prev => {
           const newErrors = { ...prev };

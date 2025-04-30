@@ -1,14 +1,18 @@
-import { Box, Container, Typography, Paper } from "@mui/material";
-import PendingIcon from '@mui/icons-material/Pending';
+import { Box, Grid as MuiGrid, Typography, Fade } from "@mui/material";
+import { useAuth } from "../hooks/AuthContext";
 import { usePlans } from "../hooks/useQueries";
-import PlanCard from "../components/molecules/PlanCard";
+import DashboardLayout from "../components/layouts/DashboardLayout";
 import CustomerStats from "../components/organisms/CustomerStats";
-import UpcomingPayments from "../components/organisms/UpcomingPayments";
-import PaymentHistory from "../components/organisms/PaymentHistory";
+import UpcomingPaymentCard from "../components/organisms/UpcomingPaymentCard";
+import PaymentCalendar from "../components/organisms/PaymentCalendar";
+import PlanCard from "../components/molecules/PlanCard";
 import LoadingFallback from "../components/molecules/LoadingFallback";
 import ErrorFallback from "../components/molecules/ErrorFallback";
-import { useAuth } from "../hooks/AuthContext";
 import { Installment } from "../types/api";
+import { PaymentStatus } from "../utils/constants";
+
+// Create a properly typed wrapper for Grid
+const Grid = MuiGrid as React.ComponentType<any>;
 
 export default function CustomerDashboard() {
   const { user } = useAuth();
@@ -17,16 +21,29 @@ export default function CustomerDashboard() {
   // Extract all installments from all plans
   const allInstallments: Installment[] = plans.flatMap(plan => plan.installments);
 
+  // Get the plan with the next upcoming payment
+  const plansWithPending = plans.filter(plan =>
+    plan.installments.some(inst => inst.status === PaymentStatus.PENDING)
+  );
+
   if (isLoading) {
-    return <LoadingFallback message="Loading your payment plans..." />;
+    return (
+      <DashboardLayout>
+        <LoadingFallback message="Loading your payment plans..." />
+      </DashboardLayout>
+    );
   }
 
   if (error) {
-    return <ErrorFallback error={error as Error} resetError={() => refetch()} />;
+    return (
+      <DashboardLayout>
+        <ErrorFallback error={error} resetError={() => refetch()} />
+      </DashboardLayout>
+    );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <DashboardLayout>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" gutterBottom fontWeight="500">
           Customer Dashboard
@@ -36,32 +53,58 @@ export default function CustomerDashboard() {
         </Typography>
       </Box>
 
-      {/* Payment Summary Cards */}
-      <CustomerStats installments={allInstallments} />
+      <Fade in={!isLoading} timeout={500}>
+        <div>
+          {/* Payment Summary Cards */}
+          <CustomerStats installments={allInstallments} />
 
-      <Typography variant="h5" gutterBottom fontWeight="500">
-        Your Payment Plans
-      </Typography>
+          <Grid container spacing={3} sx={{ mt: 3 }}>
+            <Grid item xs={12} md={7}>
+              {/* Payment Calendar */}
+              <PaymentCalendar installments={allInstallments} />
 
-      {plans.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
-          <PendingIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" gutterBottom>No Payment Plans Yet</Typography>
-          <Typography variant="body1" color="text.secondary">
-            You don't have any active payment plans at the moment.
-          </Typography>
-        </Paper>
-      ) : (
-        plans.map(plan => (
-          <PlanCard key={plan.id} plan={plan} />
-        ))
-      )}
+              {/* Your Payment Plans */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h5" gutterBottom fontWeight="500">
+                  Your Payment Plans
+                </Typography>
 
-      {/* Upcoming Payments Section */}
-      <UpcomingPayments installments={allInstallments} />
+                {plans.map(plan => (
+                  <PlanCard key={plan.id} plan={plan} />
+                ))}
+              </Box>
+            </Grid>
 
-      {/* Payment History Section */}
-      <PaymentHistory installments={allInstallments} />
-    </Container>
+            <Grid item xs={12} md={5}>
+              {/* Upcoming Payments */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h5" gutterBottom fontWeight="500">
+                  Upcoming Payments
+                </Typography>
+
+                {plansWithPending.length > 0 ? (
+                  plansWithPending.map(plan => (
+                    <UpcomingPaymentCard key={plan.id} plan={plan} />
+                  ))
+                ) : (
+                  <Box
+                    sx={{
+                      p: 3,
+                      textAlign: 'center',
+                      bgcolor: 'background.paper',
+                      borderRadius: 2
+                    }}
+                  >
+                    <Typography variant="body1" color="text.secondary">
+                      You have no upcoming payments. All your installments are paid!
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+        </div>
+      </Fade>
+    </DashboardLayout>
   );
 }

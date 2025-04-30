@@ -1,4 +1,4 @@
-import { Grid } from "@mui/material";
+import { Grid as MuiGrid } from "@mui/material";
 import StatsCard from "../molecules/StatsCard";
 import { PaymentPlan } from "../../types/api";
 import { PaymentStatus } from "../../utils/constants";
@@ -10,47 +10,61 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import DoneIcon from '@mui/icons-material/Done';
 import WarningIcon from '@mui/icons-material/Warning';
 
+// Create a properly typed wrapper for Grid item
+const Grid = MuiGrid as React.ComponentType<any>;
+
 interface MerchantStatsProps {
   plans: PaymentPlan[];
 }
 
-export default function MerchantStats({ plans }: MerchantStatsProps) {
-  // Calculate analytics
-  const totalRevenue = plans.reduce((a, p) => a + parseFloat(p.total_amount), 0);
+export default function MerchantStats({ plans }: Readonly<MerchantStatsProps>) {
+  // Calculate merchant statistics
+  const totalPlans = plans.length;
 
-  // Updated revenue calculation to include partial payments
-  const paidRevenue = plans.reduce((total, plan) => {
-    if (plan.status === PaymentStatus.PAID) {
-      // If the entire plan is paid, add the full amount
-      return total + parseFloat(plan.total_amount);
-    } else {
-      // For plans not fully paid, sum up the paid installments
-      const paidInstallmentsAmount = plan.installments
-        .filter(installment => installment.status === PaymentStatus.PAID)
-        .reduce((sum, installment) => sum + parseFloat(installment.amount), 0);
-      return total + paidInstallmentsAmount;
-    }
+  // Active plans are those in PENDING status
+  const activePlans = plans.filter(
+    plan => plan.status === PaymentStatus.PENDING
+  ).length;
+
+  const totalRevenue = plans.reduce(
+    (sum, plan) => sum + parseFloat(plan.total_amount),
+    0
+  );
+
+  const paidRevenue = plans.reduce((sum, plan) => {
+    return sum + plan.installments
+      .filter(inst => inst.status === PaymentStatus.PAID)
+      .reduce((instSum, inst) => instSum + parseFloat(inst.amount), 0);
   }, 0);
 
   const pendingRevenue = totalRevenue - paidRevenue;
 
-  // Count plans by status
-  const totalPlans = plans.length;
-  const activePlans = plans.filter(p => p.status === PaymentStatus.PENDING).length;
-  const completedPlans = plans.filter(p => p.status === PaymentStatus.PAID).length;
+  const totalInstallments = plans.reduce(
+    (sum, plan) => sum + plan.installments.length,
+    0
+  );
 
-  // Calculate success rate
-  const successRate = totalPlans ? ((completedPlans / totalPlans) * 100).toFixed(1) : "0";
+  const paidInstallments = plans.reduce(
+    (sum, plan) => sum + plan.paid_installments,
+    0
+  );
 
-  // Get overdue installments
-  const overdueInstallments = plans.flatMap(p =>
-    p.installments.filter(i => i.status === PaymentStatus.LATE)
-  ).length;
+  const successRate = totalInstallments > 0
+    ? Math.round((paidInstallments / totalInstallments) * 100)
+    : 0;
+
+  // Overdue installments are those with LATE status
+  const overdueInstallments = plans.reduce(
+    (sum, plan) => sum + plan.installments.filter(
+      inst => inst.status === PaymentStatus.LATE
+    ).length,
+    0
+  );
 
   return (
     <>
       <Grid container spacing={3} sx={{ mb: 5 }}>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatsCard
             icon={<CurrencyExchangeIcon />}
             title="Total Revenue"
@@ -59,7 +73,7 @@ export default function MerchantStats({ plans }: MerchantStatsProps) {
             iconColor="primary.main"
           />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatsCard
             icon={<AccountBalanceIcon />}
             title="Collected Revenue"
@@ -68,7 +82,7 @@ export default function MerchantStats({ plans }: MerchantStatsProps) {
             iconColor="success.main"
           />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatsCard
             icon={<PendingIcon />}
             title="Pending Revenue"
@@ -77,7 +91,7 @@ export default function MerchantStats({ plans }: MerchantStatsProps) {
             iconColor="info.main"
           />
         </Grid>
-        <Grid item xs={12} md={3}>
+        <Grid item xs={12} sm={6} md={3}>
           <StatsCard
             icon={<TrendingUpIcon />}
             title="Success Rate"
@@ -89,7 +103,7 @@ export default function MerchantStats({ plans }: MerchantStatsProps) {
       </Grid>
 
       <Grid container spacing={3} sx={{ mb: 5 }}>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={4}>
           <StatsCard
             icon={<DoneIcon />}
             title="Total Plans"
@@ -98,7 +112,7 @@ export default function MerchantStats({ plans }: MerchantStatsProps) {
             iconColor="primary.main"
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={4}>
           <StatsCard
             icon={<PendingIcon />}
             title="Active Plans"
@@ -107,7 +121,7 @@ export default function MerchantStats({ plans }: MerchantStatsProps) {
             iconColor="info.main"
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={4}>
           <StatsCard
             icon={<WarningIcon />}
             title="Overdue Installments"
