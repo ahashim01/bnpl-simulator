@@ -35,10 +35,14 @@ export default function UpcomingPaymentCard({ plan }: Readonly<UpcomingPaymentCa
   const today = dayjs();
   const daysUntilDue = dueDate.diff(today, 'day');
 
-  // Calculate progress
+  // Calculate paid installments directly from installment data
+  const calculatedPaidInstallments = plan.installments.filter(
+    inst => inst.status === PaymentStatus.PAID
+  ).length;
+
+  // Calculate progress using the directly calculated value
   const totalInstallments = plan.installments.length;
-  const paidInstallments = plan.paid_installments;
-  const progress = (paidInstallments / totalInstallments) * 100;
+  const progress = (calculatedPaidInstallments / totalInstallments) * 100;
 
   // Helper function to determine color based on days until due
   const getDueDateColor = () => {
@@ -93,7 +97,7 @@ export default function UpcomingPaymentCard({ plan }: Readonly<UpcomingPaymentCa
             </Typography>
           </Box>
           <Typography variant="caption" color="text.secondary">
-            {paidInstallments} of {totalInstallments} installments paid
+            {calculatedPaidInstallments} of {totalInstallments} installments paid
           </Typography>
         </Box>
 
@@ -156,7 +160,7 @@ export default function UpcomingPaymentCard({ plan }: Readonly<UpcomingPaymentCa
             <Box sx={{ mt: 1, display: "flex", alignItems: "center" }}>
               <EventAvailable fontSize="small" sx={{ mr: 1, color: "success.main" }} />
               <Typography variant="body2">
-                {paidInstallments} installments paid ({formatCurrency(paidInstallments * parseFloat(nextInstallment.amount))})
+                {calculatedPaidInstallments} installments paid ({formatCurrency(calculatedPaidInstallments * parseFloat(nextInstallment.amount))})
               </Typography>
             </Box>
           </Box>

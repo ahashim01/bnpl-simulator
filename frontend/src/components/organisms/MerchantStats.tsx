@@ -49,9 +49,20 @@ export default function MerchantStats({ plans }: Readonly<MerchantStatsProps>) {
     0
   );
 
-  const successRate = totalInstallments > 0
-    ? Math.round((paidInstallments / totalInstallments) * 100)
-    : 0;
+  // Calculate total installments that are not in the future (due or already paid)
+  const currentDate = new Date();
+
+  const dueInstallments = plans.reduce(
+    (sum, plan) => sum + plan.installments.filter(
+      inst => new Date(inst.due_date) <= currentDate
+    ).length,
+    0
+  );
+
+  // Success rate should be based on installments that are actually due, not future ones
+  const successRate = dueInstallments > 0
+    ? Math.round((paidInstallments / dueInstallments) * 100)
+    : 100; // If no installments are due yet, success rate is 100%
 
   // Overdue installments are those with LATE status
   const overdueInstallments = plans.reduce(

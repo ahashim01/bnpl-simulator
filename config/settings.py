@@ -49,6 +49,29 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Default Vite dev server
 ]
 
+# Additional CORS settings
+CORS_ALLOW_CREDENTIALS = True  # Important for cookies and auth headers
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+CORS_PREFLIGHT_MAX_AGE = 86400  # 24 hours
+
 ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [

@@ -123,7 +123,21 @@ class PaymentPlanReadSerializer(serializers.ModelSerializer):
         )
 
     def get_total_installments(self, obj):
-        return obj.installments.count()
+        try:
+            # Check if installments is already loaded and is a list
+            if hasattr(obj, "_prefetched_objects_cache") and "installments" in obj._prefetched_objects_cache:
+                return len(obj.installments)
+            # Otherwise use count() on the RelatedManager
+            return obj.installments.count()
+        except Exception:
+            return 0
 
     def get_paid_installments(self, obj):
-        return obj.installments.filter(status=Status.PAID).count()
+        try:
+            # Check if installments is already loaded and is a list
+            if hasattr(obj, "_prefetched_objects_cache") and "installments" in obj._prefetched_objects_cache:
+                return len([i for i in obj.installments if i.status == Status.PAID])
+            # Otherwise use filter and count on the RelatedManager
+            return obj.installments.filter(status=Status.PAID).count()
+        except Exception:
+            return 0

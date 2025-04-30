@@ -18,10 +18,9 @@ const Register = lazy(() => import("./pages/Register"));
 const MerchantDashboard = lazy(() => import("./pages/MerchantDashboard"));
 const CustomerDashboard = lazy(() => import("./pages/CustomerDashboard"));
 const MerchantPlans = lazy(() => import("./pages/MerchantPlans"));
-// If these pages don't exist yet, create placeholder components or comment out imports
-// const Customers = lazy(() => import("./pages/Customers"));
-// const PaymentHistory = lazy(() => import("./pages/PaymentHistory"));
+const Customers = lazy(() => import("./pages/Customers"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const PlanDetails = lazy(() => import("./pages/PlanDetails"));
 
 // Route guards
 interface ProtectedRouteProps {
@@ -122,6 +121,20 @@ function App() {
 
                 {/* Merchant routes */}
                 <Route
+                  path="/plans/:planId"
+                  element={
+                    <ProtectedRoute
+                      requireMerchant
+                      element={
+                        <PageTransition>
+                          <PlanDetails />
+                        </PageTransition>
+                      }
+                    />
+                  }
+                />
+
+                <Route
                   path="/plans"
                   element={
                     <ProtectedRoute
@@ -134,7 +147,7 @@ function App() {
                     />
                   }
                 />
-                {/* Commenting out routes for components that don't exist yet
+
                 <Route
                   path="/customers"
                   element={
@@ -149,21 +162,6 @@ function App() {
                   }
                 />
 
-                {/* Customer routes */}
-                {/* <Route
-                  path="/payment-history"
-                  element={
-                    <ProtectedRoute
-                      element={
-                        <PageTransition>
-                          <PaymentHistory />
-                        </PageTransition>
-                      }
-                    />
-                  }
-                /> */}
-
-                {/* Not found */}
                 <Route
                   path="*"
                   element={

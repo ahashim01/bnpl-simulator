@@ -126,6 +126,11 @@ class ApiService {
     return data;
   }
 
+  async getPlan(planId: string): Promise<PaymentPlan> {
+    const { data } = await this.api.get<PaymentPlan>(`/plans/${planId}/`);
+    return data;
+  }
+
   async createPlan(planData: CreatePlanRequest): Promise<PaymentPlan> {
     const { data } = await this.api.post<PaymentPlan>('/plans/', planData);
     return data;
@@ -139,6 +144,12 @@ class ApiService {
   // Customers
   async getCustomers(): Promise<User[]> {
     const { data } = await this.api.get<User[]>('/customers/');
+    return data;
+  }
+
+  async getCustomersWithPlans(): Promise<User[]> {
+    // This endpoint should return only customers who have plans with the current merchant
+    const { data } = await this.api.get<User[]>('/customers/with-plans/');
     return data;
   }
 }

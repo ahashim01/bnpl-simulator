@@ -14,12 +14,39 @@ from accounts.models import User
 from payments.models import Installment, PaymentPlan, Status
 
 from .permissions import CanPayInstallment, IsMerchantOrOwner
-from .serializers import CustomerSerializer, InstallmentSerializer, PaymentPlanReadSerializer
+from .serializers import (
+    CustomerSerializer,
+    InstallmentSerializer,
+    PaymentPlanCreateSerializer,
+    PaymentPlanReadSerializer,
+)
 
 
 def get_cache_key(user_id, prefix="plans"):
     """Generate a unique cache key based on user ID and prefix."""
     return f"{prefix}:{user_id}"
+
+
+class CustomersWithPlansView(generics.ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CustomerSerializer
+
+    @method_decorator(cache_page(settings.CACHE_TTL))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def get_queryset(self):
+        # Only merchants can access this endpoint
+        if not self.request.user.is_merchant:
+            return User.objects.none()
+
+        # Get customers who have plans with the current merchant
+        merchant_id = self.request.user.id
+        return (
+            User.objects.filter(is_merchant=False, customer_plans__merchant_id=merchant_id)
+            .distinct()
+            .only("id", "username", "email")
+        )
 
 
 class CustomerListView(generics.ListAPIView):
@@ -36,8 +63,15 @@ class CustomerListView(generics.ListAPIView):
         return User.objects.none()
 
 
-class PaymentPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
+class PaymentPlanViewSet(
+    mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
     permission_classes = (IsMerchantOrOwner,)
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return PaymentPlanCreateSerializer
+        return PaymentPlanReadSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -82,7 +116,8 @@ class PaymentPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewset
 
         # Use the read serializer for the response
         read_serializer = PaymentPlanReadSerializer(plan, context=self.get_serializer_context())
-        headers = self.get_success_headers(serializer.data)
+        # Use read_serializer.data for headers instead of serializer.data
+        headers = self.get_success_headers(read_serializer.data)
         return Response(read_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 

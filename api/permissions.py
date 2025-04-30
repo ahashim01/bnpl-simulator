@@ -25,6 +25,7 @@ class IsMerchantOrOwner(BasePermission):
 class CanPayInstallment(BasePermission):
     """
     Custom permission to allow customers to pay their own installments.
+    Merchants should not see the pay option.
     """
 
     def has_permission(self, request, view):
@@ -34,6 +35,9 @@ class CanPayInstallment(BasePermission):
     def has_object_permission(self, request, view, obj):
         # For 'pay' action, only the customer of the plan should be allowed
         if view.action == "pay":
+            # Hide pay action from merchants
+            if request.user.is_merchant:
+                return False
             # obj is an Installment, so we need to check against the plan's customer
             return obj.plan.customer_id == request.user.id
 

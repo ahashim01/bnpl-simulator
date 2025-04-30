@@ -238,7 +238,7 @@ export default function DashboardLayout({ children }: Readonly<DashboardLayoutPr
           >
             <Box
               component="img"
-              src="/logo.png"
+              src="/vite.svg"
               alt="BNPL"
               sx={{
                 height: 32,
@@ -342,7 +342,7 @@ export default function DashboardLayout({ children }: Readonly<DashboardLayoutPr
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-            <Box component="img" src="/logo.png" alt="BNPL" sx={{ height: 32, mr: 1 }} />
+            <Box component="img" src="/vite.svg" alt="BNPL" sx={{ height: 32, mr: 1 }} />
             <Typography variant="h6" color="primary">BNPL System</Typography>
           </Box>
 

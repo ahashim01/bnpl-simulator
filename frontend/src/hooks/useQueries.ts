@@ -22,7 +22,8 @@ export function usePlans(): UseQueryResult<PaymentPlan[], Error> {
 export function useCustomers(): UseQueryResult<User[], Error> {
   return useQuery({
     queryKey: ["customers"],
-    queryFn: () => apiService.getCustomers(),
+    // Use getCustomersWithPlans instead of getCustomers to only get customers with plans
+    queryFn: () => apiService.getCustomersWithPlans(),
     refetchOnWindowFocus: false,
     staleTime: 300000, // 5 minutes
   });
