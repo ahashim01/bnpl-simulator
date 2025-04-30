@@ -5,12 +5,16 @@ import {
     TextField,
     Typography,
     Paper,
+    Stack,
+    Divider
   } from "@mui/material";
   import { useState } from "react";
   import { useAuth } from "../hooks/AuthContext";
+  import { useNavigate } from "react-router-dom";
 
   export default function Login() {
     const { login } = useAuth();
+    const navigate = useNavigate();
     const [form, setForm] = useState({ username: "", password: "" });
 
     return (
@@ -41,6 +45,16 @@ import {
             onClick={() => login(form.username, form.password)}
           >
             Sign in
+          </Button>
+
+          <Divider sx={{ my: 2 }}>or</Divider>
+
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => navigate("/register")}
+          >
+            Register New Account
           </Button>
         </Paper>
       </Container>
