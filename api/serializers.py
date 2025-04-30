@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from accounts.models import User
-from payments.models import Installment, PaymentPlan
+from payments.models import Installment, PaymentPlan, Status
 
 
 class InstallmentSerializer(serializers.ModelSerializer):
@@ -77,4 +77,5 @@ class PaymentPlanReadSerializer(serializers.ModelSerializer):
         return obj.installments.count()
 
     def get_paid_installments(self, obj):
-        return obj.installments.filter(status="D").count()  # "D" is the code for "Paid"
+        # Fixed: Use the correct Status.PAID value instead of "D"
+        return obj.installments.filter(status=Status.PAID).count()

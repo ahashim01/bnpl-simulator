@@ -2,15 +2,41 @@ from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
 from rest_framework import generics, mixins, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import User
 from payments.models import Installment, PaymentPlan, Status
 
 from .permissions import IsMerchantOrOwner
-from .serializers import InstallmentSerializer, PaymentPlanCreateSerializer, PaymentPlanReadSerializer
+from .serializers import (
+    CustomerSerializer,
+    InstallmentSerializer,
+    PaymentPlanCreateSerializer,
+    PaymentPlanReadSerializer,
+)
 
 
+# Add this new view for listing customers
+class CustomerListView(generics.ListAPIView):
+    """
+    API endpoint to list all customers (non-merchant users).
+    Only accessible to merchants.
+    """
+
+    permission_classes = (IsAuthenticated,)
+    serializer_class = CustomerSerializer
+
+    def get_queryset(self):
+        # Only return customers (users with is_merchant=False)
+        # And only if the requesting user is a merchant
+        if self.request.user.is_merchant:
+            return User.objects.filter(is_merchant=False)
+        # If not a merchant, return empty queryset
+        return User.objects.none()
+
+
+# Keep existing classes
 class PaymentPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = (IsMerchantOrOwner,)
 
@@ -31,6 +57,17 @@ class PaymentPlanViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, viewset
 
     def perform_create(self, serializer):
         serializer.save()
+
+    # Override create method to properly handle the response
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        plan = serializer.save()
+
+        # Use the read serializer for the response
+        read_serializer = PaymentPlanReadSerializer(plan, context=self.get_serializer_context())
+        headers = self.get_success_headers(read_serializer.data)
+        return Response(read_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class InstallmentPayView(viewsets.GenericViewSet, mixins.UpdateModelMixin):

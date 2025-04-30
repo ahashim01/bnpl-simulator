@@ -25,13 +25,15 @@ import {
   import { styled } from '@mui/material/styles';
   import { useAuth } from "../hooks/AuthContext";
 
-  // Styled components for better design consistency
+  // Enhanced styled components for better visuals
   const StatsCard = styled(Card)(({ theme }) => ({
     height: '100%',
-    transition: 'transform 0.3s, box-shadow 0.3s',
+    transition: 'all 0.3s ease-in-out',
+    borderRadius: theme.shape.borderRadius * 2,
+    boxShadow: theme.shadows[1],
     '&:hover': {
-      transform: 'translateY(-5px)',
-      boxShadow: theme.shadows[4],
+      transform: 'translateY(-3px)',
+      boxShadow: theme.shadows[3],
     },
   }));
 
@@ -39,10 +41,17 @@ import {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 48,
-    height: 48,
+    width: 54,
+    height: 54,
     borderRadius: '50%',
     marginBottom: theme.spacing(1),
+  }));
+
+  const StatsValue = styled(Typography)(({ theme }) => ({
+    fontWeight: 600,
+    fontSize: '2rem',
+    marginTop: theme.spacing(1),
+    color: theme.palette.text.primary,
   }));
 
   const FormField = styled(FormControl)(({ theme }) => ({
@@ -77,10 +86,10 @@ import {
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-    // Fetch customers for the dropdown
+    // Fetch customers for the dropdown - Fix the incorrect URL
     const { data: customers = [] } = useQuery({
       queryKey: ["customers"],
-      queryFn: () => api.get("/api/customers/").then(r => r.data).catch(() => []),
+      queryFn: () => api.get("/customers/").then(r => r.data).catch(() => []),
       // If API endpoint doesn't exist yet, silently fail and use empty array
     });
 
@@ -215,51 +224,51 @@ import {
         )}
 
         {/* Analytics Cards */}
-        <Typography variant="h5" sx={{ mb: 2, fontWeight: 500 }}>
+        <Typography variant="h5" sx={{ mb: 3, fontWeight: 500 }}>
           Business Analytics
         </Typography>
-        <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid container spacing={3} sx={{ mb: 5 }}>
           <Grid item xs={12} md={3}>
             <StatsCard>
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <IconContainer sx={{ bgcolor: 'primary.light' }}>
                   <CurrencyExchangeIcon sx={{ color: 'primary.main' }} />
                 </IconContainer>
                 <Typography variant="subtitle2" color="text.secondary">Total Revenue</Typography>
-                <Typography variant="h4">{totalRevenue.toFixed(2)} SAR</Typography>
+                <StatsValue>{totalRevenue.toFixed(2)} SAR</StatsValue>
               </CardContent>
             </StatsCard>
           </Grid>
           <Grid item xs={12} md={3}>
             <StatsCard>
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <IconContainer sx={{ bgcolor: 'success.light' }}>
                   <AccountBalanceIcon sx={{ color: 'success.main' }} />
                 </IconContainer>
                 <Typography variant="subtitle2" color="text.secondary">Collected Revenue</Typography>
-                <Typography variant="h4">{paidRevenue.toFixed(2)} SAR</Typography>
+                <StatsValue>{paidRevenue.toFixed(2)} SAR</StatsValue>
               </CardContent>
             </StatsCard>
           </Grid>
           <Grid item xs={12} md={3}>
             <StatsCard>
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <IconContainer sx={{ bgcolor: 'info.light' }}>
                   <PendingIcon sx={{ color: 'info.main' }} />
                 </IconContainer>
                 <Typography variant="subtitle2" color="text.secondary">Pending Revenue</Typography>
-                <Typography variant="h4">{pendingRevenue.toFixed(2)} SAR</Typography>
+                <StatsValue>{pendingRevenue.toFixed(2)} SAR</StatsValue>
               </CardContent>
             </StatsCard>
           </Grid>
           <Grid item xs={12} md={3}>
             <StatsCard>
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <IconContainer sx={{ bgcolor: 'success.light' }}>
                   <TrendingUpIcon sx={{ color: 'success.main' }} />
                 </IconContainer>
                 <Typography variant="subtitle2" color="text.secondary">Success Rate</Typography>
-                <Typography variant="h4">{successRate}%</Typography>
+                <StatsValue>{successRate}%</StatsValue>
               </CardContent>
             </StatsCard>
           </Grid>
@@ -268,14 +277,14 @@ import {
         <Grid container spacing={3} sx={{ mb: 5 }}>
           <Grid item xs={12} md={4}>
             <StatsCard>
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <IconContainer sx={{ bgcolor: 'primary.light', mr: 2 }}>
+                  <IconContainer sx={{ bgcolor: 'primary.light', mr: 2, mb: 0 }}>
                     <DoneIcon sx={{ color: 'primary.main' }} />
                   </IconContainer>
                   <Box>
                     <Typography variant="subtitle2" color="text.secondary">Total Plans</Typography>
-                    <Typography variant="h4">{totalPlans}</Typography>
+                    <Typography variant="h4" fontWeight={600}>{totalPlans}</Typography>
                   </Box>
                 </Box>
               </CardContent>
@@ -283,14 +292,14 @@ import {
           </Grid>
           <Grid item xs={12} md={4}>
             <StatsCard>
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <IconContainer sx={{ bgcolor: 'info.light', mr: 2 }}>
+                  <IconContainer sx={{ bgcolor: 'info.light', mr: 2, mb: 0 }}>
                     <PendingIcon sx={{ color: 'info.main' }} />
                   </IconContainer>
                   <Box>
                     <Typography variant="subtitle2" color="text.secondary">Active Plans</Typography>
-                    <Typography variant="h4">{activePlans}</Typography>
+                    <Typography variant="h4" fontWeight={600}>{activePlans}</Typography>
                   </Box>
                 </Box>
               </CardContent>
@@ -298,14 +307,14 @@ import {
           </Grid>
           <Grid item xs={12} md={4}>
             <StatsCard>
-              <CardContent>
+              <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  <IconContainer sx={{ bgcolor: 'error.light', mr: 2 }}>
+                  <IconContainer sx={{ bgcolor: 'error.light', mr: 2, mb: 0 }}>
                     <WarningIcon sx={{ color: 'error.main' }} />
                   </IconContainer>
                   <Box>
                     <Typography variant="subtitle2" color="text.secondary">Overdue Installments</Typography>
-                    <Typography variant="h4" color="error">{overdueInstallments}</Typography>
+                    <Typography variant="h4" fontWeight={600} color="error">{overdueInstallments}</Typography>
                   </Box>
                 </Box>
               </CardContent>
@@ -404,7 +413,8 @@ import {
           }}
         >
           <DialogTitle sx={{ pb: 1, pt: 3 }}>
-            <Typography variant="h5" fontWeight={500}>Create Payment Plan</Typography>
+            {/* Fix: Changed from Typography variant="h5" to just use regular text */}
+            <Box sx={{ typography: 'h5', fontWeight: 500 }}>Create Payment Plan</Box>
           </DialogTitle>
 
           <DialogContent>
