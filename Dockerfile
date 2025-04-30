@@ -6,15 +6,20 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_SETTINGS_MODULE=config.settings
 
+# Install uv using the official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
 # Set work directory
 WORKDIR /app
 
-# Install dependencies
-COPY pyproject.toml .
-RUN pip install uv \
- && uv pip install -r requirements.lock
+# Copy dependency definition files first for better caching
+COPY pyproject.toml uv.lock ./
 
-# Copy project
+# Install dependencies directly in this image
+RUN uv pip install --system django celery redis
+RUN uv pip install --system -e .
+
+# Copy project files
 COPY . .
 
 # Make entrypoint script executable

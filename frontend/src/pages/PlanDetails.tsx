@@ -81,6 +81,10 @@ export default function PlanDetails() {
     );
   }
 
+  // Calculate actual counts directly from installments array
+  const totalInstallments = plan.installments.length;
+  const paidInstallments = plan.installments.filter(inst => inst.status === PaymentStatus.PAID).length;
+
   return (
     <DashboardLayout>
       <Box sx={{ mb: 4 }}>
@@ -145,12 +149,12 @@ export default function PlanDetails() {
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                   <Typography color="text.secondary">Installments:</Typography>
-                  <Typography>{plan.total_installments}</Typography>
+                  <Typography>{totalInstallments}</Typography>
                 </Box>
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                   <Typography color="text.secondary">Paid:</Typography>
-                  <Typography>{plan.paid_installments} of {plan.total_installments}</Typography>
+                  <Typography>{paidInstallments} of {totalInstallments}</Typography>
                 </Box>
 
                 <Box sx={{ mb: 2, mt: 3 }}>
@@ -194,8 +198,8 @@ export default function PlanDetails() {
                     Payment Progress
                   </Typography>
                   <PlanProgress
-                    paid={plan.paid_installments}
-                    total={plan.total_installments}
+                    paid={paidInstallments}
+                    total={totalInstallments}
                   />
                 </Box>
               </CardContent>

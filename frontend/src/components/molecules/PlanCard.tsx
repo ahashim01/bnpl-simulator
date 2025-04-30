@@ -35,6 +35,10 @@ export default function PlanCard({ plan, delay = 0 }: PlanCardProps) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
 
+  // Calculate actual counts directly from installments array
+  const totalInstallments = plan.installments.length;
+  const paidInstallments = plan.installments.filter(inst => inst.status === PaymentStatus.PAID).length;
+
   return (
     <Paper
       component={motion.div}
@@ -125,8 +129,8 @@ export default function PlanCard({ plan, delay = 0 }: PlanCardProps) {
       </Box>
 
       <PlanProgress
-        paid={plan.paid_installments}
-        total={plan.total_installments}
+        paid={paidInstallments}
+        total={totalInstallments}
       />
 
       <Collapse in={expanded} timeout="auto">

@@ -1,13 +1,16 @@
-version: '3.8'
-
 services:
   backend:
-    build: ./backend
+    build: .
     restart: always
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app
+      - ./accounts:/app/accounts
+      - ./api:/app/api
+      - ./config:/app/config
+      - ./payments:/app/payments
+      - ./static:/app/static
+      - ./manage.py:/app/manage.py
     depends_on:
       - db
       - redis
@@ -60,11 +63,15 @@ services:
       - bnpl-network
 
   celery:
-    build: ./backend
+    build: .
     restart: always
     command: celery -A config worker -l INFO
     volumes:
-      - ./backend:/app
+      - ./accounts:/app/accounts
+      - ./api:/app/api
+      - ./config:/app/config
+      - ./payments:/app/payments
+      - ./manage.py:/app/manage.py
     depends_on:
       - db
       - redis
@@ -79,11 +86,15 @@ services:
       - bnpl-network
 
   celery-beat:
-    build: ./backend
+    build: .
     restart: always
     command: celery -A config beat -l INFO
     volumes:
-      - ./backend:/app
+      - ./accounts:/app/accounts
+      - ./api:/app/api
+      - ./config:/app/config
+      - ./payments:/app/payments
+      - ./manage.py:/app/manage.py
     depends_on:
       - db
       - redis

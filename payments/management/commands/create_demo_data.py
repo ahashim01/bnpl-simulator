@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from payments.models import Installment, PaymentPlan
+from payments.models import Installment, PaymentPlan, Status
 
 User = get_user_model()
 
@@ -53,52 +53,127 @@ class Command(BaseCommand):
             {
                 "customer": customers[0],
                 "total_amount": Decimal("1200.00"),
-                "description": "Electronics purchase plan",
                 "installments": [
-                    {"amount": Decimal("400.00"), "due_date": timezone.now() - timedelta(days=30), "status": "paid"},
-                    {"amount": Decimal("400.00"), "due_date": timezone.now() + timedelta(days=0), "status": "pending"},
-                    {"amount": Decimal("400.00"), "due_date": timezone.now() + timedelta(days=30), "status": "pending"},
+                    {
+                        "amount": Decimal("400.00"),
+                        "due_date": timezone.now() - timedelta(days=30),
+                        "status": Status.PAID,
+                        "sequence": 1,
+                    },
+                    {
+                        "amount": Decimal("400.00"),
+                        "due_date": timezone.now() + timedelta(days=0),
+                        "status": Status.PENDING,
+                        "sequence": 2,
+                    },
+                    {
+                        "amount": Decimal("400.00"),
+                        "due_date": timezone.now() + timedelta(days=30),
+                        "status": Status.PENDING,
+                        "sequence": 3,
+                    },
                 ],
             },
             {
                 "customer": customers[1],
                 "total_amount": Decimal("900.00"),
-                "description": "Furniture payment plan",
                 "installments": [
-                    {"amount": Decimal("300.00"), "due_date": timezone.now() - timedelta(days=60), "status": "paid"},
-                    {"amount": Decimal("300.00"), "due_date": timezone.now() - timedelta(days=30), "status": "paid"},
-                    {"amount": Decimal("300.00"), "due_date": timezone.now() + timedelta(days=0), "status": "pending"},
+                    {
+                        "amount": Decimal("300.00"),
+                        "due_date": timezone.now() - timedelta(days=60),
+                        "status": Status.PAID,
+                        "sequence": 1,
+                    },
+                    {
+                        "amount": Decimal("300.00"),
+                        "due_date": timezone.now() - timedelta(days=30),
+                        "status": Status.PAID,
+                        "sequence": 2,
+                    },
+                    {
+                        "amount": Decimal("300.00"),
+                        "due_date": timezone.now() + timedelta(days=0),
+                        "status": Status.PENDING,
+                        "sequence": 3,
+                    },
                 ],
             },
             {
                 "customer": customers[2],
                 "total_amount": Decimal("600.00"),
-                "description": "Mobile phone purchase",
                 "installments": [
-                    {"amount": Decimal("200.00"), "due_date": timezone.now() - timedelta(days=30), "status": "paid"},
-                    {"amount": Decimal("200.00"), "due_date": timezone.now() - timedelta(days=15), "status": "late"},
-                    {"amount": Decimal("200.00"), "due_date": timezone.now() + timedelta(days=15), "status": "pending"},
+                    {
+                        "amount": Decimal("200.00"),
+                        "due_date": timezone.now() - timedelta(days=30),
+                        "status": Status.PAID,
+                        "sequence": 1,
+                    },
+                    {
+                        "amount": Decimal("200.00"),
+                        "due_date": timezone.now() - timedelta(days=15),
+                        "status": Status.LATE,
+                        "sequence": 2,
+                    },
+                    {
+                        "amount": Decimal("200.00"),
+                        "due_date": timezone.now() + timedelta(days=15),
+                        "status": Status.PENDING,
+                        "sequence": 3,
+                    },
                 ],
             },
             {
                 "customer": customers[0],
                 "total_amount": Decimal("1500.00"),
-                "description": "Laptop purchase plan",
                 "installments": [
-                    {"amount": Decimal("500.00"), "due_date": timezone.now() - timedelta(days=90), "status": "paid"},
-                    {"amount": Decimal("500.00"), "due_date": timezone.now() - timedelta(days=60), "status": "paid"},
-                    {"amount": Decimal("500.00"), "due_date": timezone.now() - timedelta(days=30), "status": "paid"},
+                    {
+                        "amount": Decimal("500.00"),
+                        "due_date": timezone.now() - timedelta(days=90),
+                        "status": Status.PAID,
+                        "sequence": 1,
+                    },
+                    {
+                        "amount": Decimal("500.00"),
+                        "due_date": timezone.now() - timedelta(days=60),
+                        "status": Status.PAID,
+                        "sequence": 2,
+                    },
+                    {
+                        "amount": Decimal("500.00"),
+                        "due_date": timezone.now() - timedelta(days=30),
+                        "status": Status.PAID,
+                        "sequence": 3,
+                    },
                 ],
             },
             {
                 "customer": customers[1],
                 "total_amount": Decimal("2400.00"),
-                "description": "Home appliances bundle",
                 "installments": [
-                    {"amount": Decimal("600.00"), "due_date": timezone.now() - timedelta(days=45), "status": "paid"},
-                    {"amount": Decimal("600.00"), "due_date": timezone.now() - timedelta(days=15), "status": "late"},
-                    {"amount": Decimal("600.00"), "due_date": timezone.now() + timedelta(days=15), "status": "pending"},
-                    {"amount": Decimal("600.00"), "due_date": timezone.now() + timedelta(days=45), "status": "pending"},
+                    {
+                        "amount": Decimal("600.00"),
+                        "due_date": timezone.now() - timedelta(days=45),
+                        "status": Status.PAID,
+                        "sequence": 1,
+                    },
+                    {
+                        "amount": Decimal("600.00"),
+                        "due_date": timezone.now() - timedelta(days=15),
+                        "status": Status.LATE,
+                        "sequence": 2,
+                    },
+                    {
+                        "amount": Decimal("600.00"),
+                        "due_date": timezone.now() + timedelta(days=15),
+                        "status": Status.PENDING,
+                        "sequence": 3,
+                    },
+                    {
+                        "amount": Decimal("600.00"),
+                        "due_date": timezone.now() + timedelta(days=45),
+                        "status": Status.PENDING,
+                        "sequence": 4,
+                    },
                 ],
             },
         ]
@@ -111,7 +186,6 @@ class Command(BaseCommand):
                 merchant=merchant,
                 customer=plan_data["customer"],
                 total_amount=plan_data["total_amount"],
-                description=plan_data["description"],
                 defaults={
                     "start_date": timezone.now() - timedelta(days=90),
                     "status": "pending",
@@ -119,7 +193,7 @@ class Command(BaseCommand):
             )
 
             if created:
-                self.stdout.write(self.style.SUCCESS(f"Created payment plan: {plan.description}"))
+                self.stdout.write(self.style.SUCCESS(f"Created payment plan for customer: {plan.customer.username}"))
 
                 # Create installments
                 for inst_data in installments_data:
@@ -128,6 +202,7 @@ class Command(BaseCommand):
                         amount=inst_data["amount"],
                         due_date=inst_data["due_date"],
                         status=inst_data["status"],
+                        sequence=inst_data["sequence"],
                     )
                     self.stdout.write(
                         self.style.SUCCESS(

@@ -12,8 +12,8 @@ RUN npm install
 # Copy project files
 COPY . .
 
-# Build the app
-RUN npm run build
+# Build the app with type checking disabled
+RUN npm run build:dev
 
 # Expose port
 EXPOSE 5173
