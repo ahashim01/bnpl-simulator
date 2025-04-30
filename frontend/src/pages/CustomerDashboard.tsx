@@ -1,4 +1,4 @@
-import { Box, Button, Card, CardContent, Chip, Container, Divider, Grid, Paper, Typography, Stack } from "@mui/material";
+import { Box, Button, Card, CardContent, Chip, Container, Divider, Grid, Paper, Typography, Stack, IconButton, Collapse } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import api from "../services/api";
 import { InstallmentRow, Inst } from "../components/molecules/InstallmentRow";
@@ -9,6 +9,9 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import PaymentIcon from '@mui/icons-material/Payment';
 import PendingIcon from '@mui/icons-material/Pending';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import { useState } from "react";
 
 // Status code to display text mapping for plans
 const PLAN_STATUS_MAP: Record<string, string> = {
@@ -30,6 +33,17 @@ export default function CustomerDashboard() {
     queryKey: ["plans"],
     queryFn: () => api.get("/plans/").then(r => r.data),
   });
+
+  // State to track which plans are expanded - initialize all as collapsed (false)
+  const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
+
+  // Toggle expansion of a plan
+  const togglePlanExpansion = (planId: number) => {
+    setExpandedPlans(prev => ({
+      ...prev,
+      [planId]: !prev[planId]
+    }));
+  };
 
   const upcoming = plans.flatMap((p:any)=>p.installments)
                          .filter((i:Inst)=>i.status==="P") // Update to single-letter code
@@ -133,8 +147,17 @@ export default function CustomerDashboard() {
       ) : (
         plans.map((plan:any) => (
           <Paper key={plan.id} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">Plan #{plan.id} - {plan.total_amount} SAR</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Typography variant="h6" sx={{ mr: 1 }}>Plan #{plan.id} - {plan.total_amount} SAR</Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => togglePlanExpansion(plan.id)}
+                  aria-label={expandedPlans[plan.id] ? "collapse" : "expand"}
+                >
+                  {expandedPlans[plan.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </IconButton>
+              </Box>
               <Chip
                 label={PLAN_STATUS_MAP[plan.status] || plan.status}
                 color={STATUS_COLOR_MAP[plan.status] || "default"}
@@ -147,12 +170,13 @@ export default function CustomerDashboard() {
               total={plan.total_installments || plan.installments.length}
             />
 
-            <Divider sx={{ my: 2 }} />
-
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>Installments</Typography>
-            {plan.installments.map((i:Inst) => (
-              <InstallmentRow key={i.id} inst={i} />
-            ))}
+            <Collapse in={expandedPlans[plan.id] === true} timeout="auto">
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>Installments</Typography>
+              {plan.installments.map((i:Inst) => (
+                <InstallmentRow key={i.id} inst={i} />
+              ))}
+            </Collapse>
           </Paper>
         ))
       )}

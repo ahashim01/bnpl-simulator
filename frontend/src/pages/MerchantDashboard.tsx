@@ -1,8 +1,8 @@
 import {
-    Container, Typography, Paper, Stack, TextField, Button, Card, CardContent, Grid, Box,
-    Divider, Tab, Tabs, Alert, IconButton, Tooltip, useTheme, Chip, Fade,
+    Container, Typography, Paper, Button, Card, CardContent, Grid, Box,
+    Divider, Tab, Tabs, Alert, IconButton, Tooltip, useTheme, Chip, Fade, Collapse,
     Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment, CircularProgress,
-    FormControl, InputLabel, FilledInput, FormHelperText, Autocomplete
+    FormControl, InputLabel, FormHelperText, Autocomplete, FilledInput
   } from "@mui/material";
   import dayjs from "dayjs";
   import { useState, SyntheticEvent } from "react";
@@ -22,6 +22,8 @@ import {
   import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
   import PaymentIcon from '@mui/icons-material/Payment';
   import PersonIcon from '@mui/icons-material/Person';
+  import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+  import ExpandLessIcon from '@mui/icons-material/ExpandLess';
   import { styled } from '@mui/material/styles';
   import { useAuth } from "../hooks/AuthContext";
 
@@ -92,6 +94,8 @@ import {
     const { user } = useAuth();
     const [tabValue, setTabValue] = useState(0);
     const [openCreateDialog, setOpenCreateDialog] = useState(false);
+    // State to track expanded plans - initialize all as collapsed (false)
+    const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
     const [form, setForm] = useState({
       total_amount: "",
       start_date: dayjs().format("YYYY-MM-DD"),
@@ -99,6 +103,14 @@ import {
       customer_email: "",
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+    // Toggle expansion of a plan
+    const togglePlanExpansion = (planId: number) => {
+      setExpandedPlans(prev => ({
+        ...prev,
+        [planId]: !prev[planId]
+      }));
+    };
 
     // Fetch customers for the dropdown - Fix the incorrect URL
     const { data: customers = [] } = useQuery({
@@ -178,8 +190,21 @@ import {
 
     // Analytics calculations
     const totalRevenue = plans.reduce((a:any, p:any) => a + parseFloat(p.total_amount), 0);
-    const paidRevenue = plans.filter((p:any) => p.status === "D")
-                            .reduce((a:any, p:any) => a + parseFloat(p.total_amount), 0);
+
+    // Updated revenue calculation to include partial payments
+    const paidRevenue = plans.reduce((total:number, plan:any) => {
+      if (plan.status === "D") {
+        // If the entire plan is paid, add the full amount
+        return total + parseFloat(plan.total_amount);
+      } else {
+        // For plans not fully paid, sum up the paid installments
+        const paidInstallmentsAmount = plan.installments
+          .filter((installment:Inst) => installment.status === "D")
+          .reduce((sum:number, installment:Inst) => sum + parseFloat(installment.amount), 0);
+        return total + paidInstallmentsAmount;
+      }
+    }, 0);
+
     const pendingRevenue = totalRevenue - paidRevenue;
 
     // Count plans by status
@@ -374,7 +399,16 @@ import {
                   <Paper key={p.id} sx={{ p: 3, mb: 3, borderRadius: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                       <Box>
-                        <Typography variant="h6">Plan #{p.id}</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Typography variant="h6" sx={{ mr: 1 }}>Plan #{p.id}</Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => togglePlanExpansion(p.id)}
+                            aria-label={expandedPlans[p.id] ? "collapse" : "expand"}
+                          >
+                            {expandedPlans[p.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                          </IconButton>
+                        </Box>
                         <Typography variant="body1" fontWeight={500}>
                           {p.total_amount} SAR
                         </Typography>
@@ -399,15 +433,17 @@ import {
                       total={p.total_installments || p.installments.length}
                     />
 
-                    <Divider sx={{ my: 2 }} />
+                    <Collapse in={expandedPlans[p.id] === true} timeout="auto">
+                      <Divider sx={{ my: 2 }} />
 
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
-                      Installments
-                    </Typography>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
+                        Installments
+                      </Typography>
 
-                    {p.installments.map((i:Inst) => (
-                      <InstallmentRow key={i.id} inst={i} />
-                    ))}
+                      {p.installments.map((i:Inst) => (
+                        <InstallmentRow key={i.id} inst={i} />
+                      ))}
+                    </Collapse>
                   </Paper>
                 ))}
               </Box>
