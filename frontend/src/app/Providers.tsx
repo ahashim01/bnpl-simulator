@@ -3,13 +3,13 @@ import { BrowserRouter } from "react-router-dom";
 import { ReactNode } from "react";
 import AuthProvider from "../hooks/AuthContext";
 
-const client = new QueryClient({
-  defaultOptions: { queries: { staleTime: 1000 * 60 } }, // 1 min cache
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 60_000 } }, // 1 min
 });
 
 export default function Providers({ children }: { children: ReactNode }) {
   return (
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>{children}</BrowserRouter>
       </AuthProvider>

@@ -1,8 +1,10 @@
+from django.contrib.auth.password_validation import validate_password
 from django.utils import timezone
-from rest_framework import mixins, status, viewsets
+from rest_framework import generics, mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from accounts.models import User
 from payments.models import Installment, PaymentPlan, Status
 
 from .permissions import IsMerchantOrOwner
@@ -45,3 +47,24 @@ class InstallmentPayView(viewsets.GenericViewSet, mixins.UpdateModelMixin):
         inst.paid_at = timezone.now()
         inst.save(update_fields=["status", "paid_at"])
         return Response(self.get_serializer(inst).data, status=status.HTTP_200_OK)
+
+
+class RegisterView(generics.CreateAPIView):
+    permission_classes = ()
+    authentication_classes = ()
+
+    class Serializer(serializers.ModelSerializer):
+        password = serializers.CharField(write_only=True)
+
+        class Meta:
+            model = User
+            fields = ("username", "password", "is_merchant")
+
+        def validate_password(self, value):
+            validate_password(value)
+            return value
+
+        def create(self, val):
+            return User.objects.create_user(**val)
+
+    serializer_class = Serializer

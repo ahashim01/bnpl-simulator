@@ -29,16 +29,25 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "drf_spectacular",
+    "corsheaders",  # Add CORS headers support
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # CORS middleware - add it at the top
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+# CORS Configuration
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # In debug mode, allow all origins
+# For production, specify allowed origins
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # Default Vite dev server
 ]
 
 ROOT_URLCONF = "config.urls"
