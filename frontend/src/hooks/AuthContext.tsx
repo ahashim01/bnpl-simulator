@@ -9,6 +9,7 @@ import {
 } from "react";
 import { jwtDecode } from "jwt-decode";
 import apiService from "../services/api";
+import tokenManager from "../services/tokenManager";
 import { LoginRequest, User } from "../types/api";
 
 interface JwtPayload {
@@ -35,7 +36,7 @@ const transformUserData = (payload: JwtPayload): User => {
     id: payload.user_id,
     username: payload.username ?? '',
     email: '',  // Email is not included in the token
-    isMerchant: payload.is_merchant === true
+    isMerchant: payload.is_merchant === true,
   };
 };
 
@@ -44,10 +45,10 @@ export default function AuthProvider({ children }: { readonly children: ReactNod
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize user from token in localStorage
+  // Initialize user from token
   useEffect(() => {
     const initializeAuth = () => {
-      const token = localStorage.getItem("access");
+      const token = tokenManager.getAccessToken();
       if (token) {
         try {
           const payload = jwtDecode<JwtPayload>(token);
@@ -55,16 +56,14 @@ export default function AuthProvider({ children }: { readonly children: ReactNod
           // Check if token is expired
           const currentTime = Date.now() / 1000;
           if (payload.exp < currentTime) {
-            localStorage.removeItem("access");
-            localStorage.removeItem("refresh");
+            tokenManager.clearTokens();
             return null;
           }
 
           setUser(transformUserData(payload));
         } catch (error) {
           console.error("Error decoding token:", error);
-          localStorage.removeItem("access");
-          localStorage.removeItem("refresh");
+          tokenManager.clearTokens();
         }
       }
       setIsLoading(false);
@@ -79,11 +78,7 @@ export default function AuthProvider({ children }: { readonly children: ReactNod
 
     try {
       const loginRequest: LoginRequest = { username, password };
-      const { access, refresh } = await apiService.login(loginRequest);
-
-      localStorage.setItem("access", access);
-      localStorage.setItem("refresh", refresh);
-
+      const { access } = await apiService.login(loginRequest);
       const payload = jwtDecode<JwtPayload>(access);
       const userData = transformUserData(payload);
 
@@ -98,8 +93,7 @@ export default function AuthProvider({ children }: { readonly children: ReactNod
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
+    apiService.logout();
     setUser(null);
   }, []);
 

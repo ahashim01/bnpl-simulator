@@ -1,17 +1,16 @@
 import {
-  Box,
   Button,
   Container,
   TextField,
   Typography,
   Paper,
-  Stack,
   Divider,
   Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/AuthContext";
 import { useForm } from "../hooks/useForm";
+import { loginSchema } from "../utils/validation";
 
 interface LoginForm {
   username: string;
@@ -25,14 +24,9 @@ export default function Login() {
   const { values, errors, isSubmitting, handleChange, handleSubmit } =
     useForm<LoginForm>({
       initialValues: { username: "", password: "" },
+      validationSchema: loginSchema,
       onSubmit: async (values) => {
         await login(values.username, values.password);
-      },
-      validate: (values) => {
-        const errors: Record<string, string> = {};
-        if (!values.username) errors.username = "Username is required";
-        if (!values.password) errors.password = "Password is required";
-        return errors;
       },
     });
 
@@ -59,6 +53,7 @@ export default function Login() {
             onChange={handleChange}
             error={!!errors.username}
             helperText={errors.username}
+            autoComplete="username"
           />
           <TextField
             margin="normal"
@@ -70,6 +65,7 @@ export default function Login() {
             onChange={handleChange}
             error={!!errors.password}
             helperText={errors.password}
+            autoComplete="current-password"
           />
           <Button
             sx={{ mt: 2 }}

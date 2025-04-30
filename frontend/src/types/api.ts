@@ -53,3 +53,4 @@ export interface RegisterRequest {
   last_name?: string;
   is_merchant: boolean;
 }
+export { PaymentStatus };

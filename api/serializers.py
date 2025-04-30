@@ -1,3 +1,5 @@
+import bleach
+from django.core.validators import EmailValidator, MinValueValidator
 from rest_framework import serializers
 
 from accounts.models import User
@@ -11,18 +13,65 @@ class InstallmentSerializer(serializers.ModelSerializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
+    # Use the built-in EmailValidator
+    email = serializers.EmailField(validators=[EmailValidator()])
+
+    # Sanitize text fields
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        ret["username"] = bleach.clean(ret["username"])
+        ret["email"] = bleach.clean(ret["email"])
+        return ret
+
     class Meta:
         model = User
         fields = ("id", "username", "email")
 
 
 class PaymentPlanCreateSerializer(serializers.Serializer):
-    total_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_amount = serializers.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(0.01, message="Amount must be positive")]
+    )
     start_date = serializers.DateField()
-    installments = serializers.IntegerField(min_value=1)
-    customer_email = serializers.EmailField()
+    installments = serializers.IntegerField(
+        min_value=1,
+        max_value=48,  # Set a reasonable maximum
+        error_messages={
+            "min_value": "At least 1 installment is required.",
+            "max_value": "Cannot exceed 48 installments.",
+        },
+    )
+    customer_email = serializers.EmailField(validators=[EmailValidator()])
+
+    def validate(self, data):
+        """
+        Cross-field validation to ensure reasonable values.
+        """
+        if "total_amount" in data and "installments" in data:
+            # Minimum installment amount (e.g., at least $5)
+            min_installment = 5.0
+            installment_amount = float(data["total_amount"]) / data["installments"]
+
+            if installment_amount < min_installment:
+                raise serializers.ValidationError(
+                    f"Each installment would be {installment_amount:.2f}, which is below the minimum of {min_installment:.2f}."  # noqa: E501
+                )
+
+        # Ensure start_date is not too far in the future (e.g., max 1 year)
+        if "start_date" in data:
+            from datetime import date, timedelta
+
+            max_future_date = date.today() + timedelta(days=365)
+
+            if data["start_date"] > max_future_date:
+                raise serializers.ValidationError("Start date cannot be more than a year in the future.")
+
+        return data
 
     def validate_customer_email(self, value):
+        # Sanitize input
+        value = bleach.clean(value)
+
         # Check if customer exists with this email
         try:
             User.objects.get(email=value, is_merchant=False)
@@ -77,5 +126,4 @@ class PaymentPlanReadSerializer(serializers.ModelSerializer):
         return obj.installments.count()
 
     def get_paid_installments(self, obj):
-        # Fixed: Use the correct Status.PAID value instead of "D"
         return obj.installments.filter(status=Status.PAID).count()

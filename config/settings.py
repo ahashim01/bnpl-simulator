@@ -139,19 +139,37 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ("rest_framework_simplejwt.authentication.JWTAuthentication",),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {"anon": "100/day", "user": "1000/day"},
 }
 
+
+# JWT settings with enhanced security
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),  # Shorter lifetime for access tokens
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_USE": True,
-    # Add custom user claims to JWT token
-    "USER_ID_CLAIM": "user_id",
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,  # Track when users log in
+    # Algorithm and signing
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "VERIFYING_KEY": None,
+    # Audience and issuer claims for additional security
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
     "USER_ID_FIELD": "id",
-    "UPDATE_LAST_LOGIN": False,
-    # Add our custom payload handler
+    "USER_ID_CLAIM": "user_id",
+    # Additional security claims
+    "JTI_CLAIM": "jti",
+    "TOKEN_TYPE_CLAIM": "token_type",
+    # Include user metadata in the token
     "USER_AUTHENTICATION_RULE": "accounts.jwt_auth.custom_user_authentication_rule",
-    # Include username in the token
     "TOKEN_OBTAIN_SERIALIZER": "accounts.jwt_auth.CustomTokenObtainPairSerializer",
 }
+
+# Add CSRF protection settings
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173"]  # Add your frontend domains
