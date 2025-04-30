@@ -4,20 +4,26 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { useAuth } from "../hooks/AuthContext";
 
 const Login = lazy(() => import("../pages/Login"));
-const MerchantPlans = lazy(() => import("../pages/MerchantPlans"));
-const UserDashboard = lazy(() => import("../pages/UserDashboard"));
+const Register = lazy(() => import("../pages/Register"));
+const MerchantDashboard = lazy(() => import("../pages/MerchantDashboard"));
+const CustomerDashboard = lazy(() => import("../pages/CustomerDashboard"));
+import NavBar from "../components/atoms/NavBar";
 
 export default function AppRouter() {
   const { user } = useAuth();
 
   return (
-    <Suspense fallback={<CircularProgress sx={{ m: 4 }} />}>
+    <>
+    {user && <NavBar />}
+    <Suspense fallback={<CircularProgress sx={{ m:4 }}/>}>
       <Routes>
-        {!user && <Route path="/login" element={<Login />} />}
-        {user?.isMerchant && <Route path="/" element={<MerchantPlans />} />}
-        {user && !user.isMerchant && <Route path="/" element={<UserDashboard />} />}
-        <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+        <Route path="/register" element={!user ? <Register /> : <Navigate to="/" replace />} />
+        {user?.isMerchant && <Route path="/" element={<MerchantDashboard/>}/>}
+        {user && !user.isMerchant && <Route path="/" element={<CustomerDashboard/>}/>}
+        <Route path="*" element={<Navigate to={user?"/":"/login"} replace/>}/>
       </Routes>
     </Suspense>
+  </>
   );
 }
