@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=django-insecure-development-only-key
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/bnpl
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    networks:
+      - bnpl-network
+
+  frontend:
+    build: ./frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    networks:
+      - bnpl-network
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=bnpl
+    ports:
+      - "5432:5432"
+    networks:
+      - bnpl-network
+
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bnpl-network
+
+  celery:
+    build: ./backend
+    restart: always
+    command: celery -A config worker -l INFO
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+      - backend
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=django-insecure-development-only-key
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/bnpl
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    networks:
+      - bnpl-network
+
+  celery-beat:
+    build: ./backend
+    restart: always
+    command: celery -A config beat -l INFO
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+      - backend
+      - celery
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=django-insecure-development-only-key
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/bnpl
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    networks:
+      - bnpl-network
+
+networks:
+  bnpl-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

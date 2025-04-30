@@ -1,189 +1,159 @@
-# BNPL Payment Plan Simulator
+# BNPL Payment System
 
-A web-based Buy Now, Pay Later (BNPL) dashboard that allows merchants to create payment plans and customers to view and manage their installments.
+A Buy Now, Pay Later (BNPL) payment system that allows merchants to offer installment payment plans to their customers.
 
 ## Features
 
-### Merchant Features
-- Create BNPL payment plans by specifying:
-  - Total amount
-  - Customer email
-  - Number of installments
-  - Start date
-- View comprehensive analytics dashboard with:
-  - Total revenue
-  - Collected revenue
-  - Pending revenue
-  - Success rate
-  - Total plans
-  - Active plans
-  - Overdue installments
-- Monitor payment plans and installment statuses
+- Merchant and customer user roles
+- Payment plan creation and management
+- Installment tracking and payment processing
+- Real-time dashboard with analytics
+- Email notifications for payment reminders
+- Secure API with JWT authentication
 
-### Customer Features
-- Overview dashboard with payment summary
-  - Active payment plans
-  - Total amount paid
-  - Remaining amount to pay
-- Next payment notification
-- Detailed view of all payment plans with progress indicators
-- Upcoming installments section
-- Payment history section
-- Pay installments with a simple button click
-
-### Technical Features
-- Automatic installment calculation with proper rounding
-- Due date calculation (monthly intervals)
-- Status tracking (Pending, Paid, Late)
-- Automatic detection of overdue payments
-- Email notifications for upcoming and overdue payments
-- Progress tracking for payment plans
-
-## Technology Stack
-
-### Backend
-- Django / Django REST Framework
-- PostgreSQL (SQLite for development)
-- Celery for background tasks
-- JWT authentication
-
-### Frontend
-- React
-- Material UI
-- React Query for data fetching
-- dayjs for date handling
-
-## Setup Instructions
+## Quick Start Guide
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 16+
-- Redis (for Celery)
 
-### Backend Setup
-1. Clone the repository
-   ```
-   git clone <repository-url>
-   cd bnpl-simulator
-   ```
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
 
-2. Create and activate a virtual environment
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+### Running the Application
 
-3. Install dependencies
-   ```
-   pip install -r requirements.txt
-   ```
+1. Clone the repository:
+   ```bash
+    git clone https://github.com/yourusername/bnpl-simulator.git
+    cd bnpl-simulator
+    ```
 
-4. Run migrations
-   ```
-   python manage.py migrate
-   ```
+2. Start the application with Docker Compose:
+    ```bash
+    docker-compose up -d
+    ```
 
-5. Create a superuser
-   ```
-   python manage.py createsuperuser
-   ```
+3. Set up the initial database and create a superuser:
+    ```bash
+    # Apply migrations
+    docker-compose exec backend python manage.py migrate
 
-6. Run the development server
-   ```
-   python manage.py runserver
-   ```
+    # Create a superuser (admin)
+    docker-compose exec backend python manage.py createsuperuser
+    ```
 
-### Frontend Setup
-1. Navigate to the frontend directory
-   ```
-   cd frontend
-   ```
+4. Access the application:
+    - Frontend: [http://localhost:5173](http://localhost:5173)
+    - Backend API: [http://localhost:8000/api](http://localhost:8000/api)
+    - Admin panel: [http://localhost:8000/admin](http://localhost:8000/admin)
 
-2. Install dependencies
-   ```
-   npm install
-   ```
 
-3. Start the development server
-   ```
-   npm run dev
-   ```
+### Stopping the Application:
+```bash
+docker-compose down
+```
+#### To remove volumes (database data) as well:
+```bash
+docker-compose down -v
+```
+### Creating Test Users and Payment Plans
+### Via Django Admin
 
-### Running Background Tasks (Optional)
-1. Start Redis server (if not already running)
-   ```
-   redis-server
-   ```
+1. Log in to the Django admin panel at http://localhost:8000/admin with your superuser credentials.
+2. Create test users:
+    - Navigate to "Users" and click "Add User"
+    - Set the username, password, and other required fields
+    - To make a user a merchant, check the "Is merchant" checkbox
+    - Save the user
 
-2. Start Celery worker
-   ```
-   celery -A config worker -l info
-   ```
+3. Creating Payment Plans:
+    - Navigate to "Payment plans" and click "Add Payment Plan"
+    - Select a merchant and a customer from the dropdown menus
+    - Enter the total amount and other fields
+    - Save the payment plan
+    - Add installments to the payment plan
 
-3. Start Celery beat for scheduled tasks
-   ```
-   celery -A config beat -l info
-   ```
+### Via API
 
-## Securing Payment APIs in Production
+1. Register a merchant user:
+    ```bash
+    curl -X POST http://localhost:8000/api/register/ \
+    -H "Content-Type: application/json" \
+    -d '{"username": "merchant1", "email": "merchant1@example.com", "password": "securepass123", "is_merchant": true}'
+    ```
 
-For a production deployment of this BNPL system, several additional security measures would be necessary:
+2. Register a customer user:
+    ```bash
+    curl -X POST http://localhost:8000/api/register/ \
+    -H "Content-Type: application/json" \
+    -d '{"username": "customer1", "email": "customer1@example.com", "password": "securepass123", "is_merchant": false}'
+    ```
 
-1. **HTTPS Only** - All API communications must be encrypted using TLS/SSL.
+3. Get a JWT token for the merchant:
+    ```bash
+    curl -X POST http://localhost:8000/api/token/ \
+    -H "Content-Type: application/json" \
+    -d '{"username": "merchant1", "password": "securepass123"}'
+    ```
 
-2. **API Authentication**
-   - Use OAuth 2.0 with refresh tokens
-   - Implement token expiration and rotation
-   - Use proper scopes for different API endpoints
+4. Create a payment plan (replace ```<token>``` with the JWT token from step 3):
+    ```bash
+    curl -X POST http://localhost:8000/api/plans/ \
+    -H "Authorization: Bearer <token>" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "customer": 2,
+        "total_amount": "1000.00",
+        "description": "Test payment plan",
+        "installments": [
+        {"amount": "333.33", "due_date": "2025-06-01"},
+        {"amount": "333.33", "due_date": "2025-07-01"},
+        {"amount": "333.34", "due_date": "2025-08-01"}
+        ]
+    }'
+    ```
 
-3. **Data Security**
-   - Encrypt sensitive data at rest (payment details, user information)
-   - Implement proper data sanitization and validation
-   - Use parameterized queries to prevent SQL injection
+### Via Demo Data Command
+For convenience, you can also load demo data:
+```bash
+docker-compose exec backend python manage.py create_demo_data
+```
+#### This will create:
 
-4. **PCI DSS Compliance**
-   - For real payment processing, ensure PCI DSS compliance
-   - Consider using a trusted payment gateway (like Stripe, PayPal) rather than handling payments directly
-   - Tokenize payment information
+- 1 merchant user (username: merchant, password: merchant123)
+- 3 customer users (usernames: customer1, customer2, customer3, password: customer123)
+- 5 payment plans with various statuses and installments
 
-5. **Rate Limiting and Throttling**
-   - Implement rate limiting to prevent brute force attacks
-   - Add request throttling to prevent DoS attacks
+#### Security Considerations
+This application implements several security measures, but for a production environment, additional considerations are necessary:
+#### Current Security Measures
 
-6. **Monitoring and Logging**
-   - Implement comprehensive logging for security events
-   - Set up real-time monitoring for suspicious activities
-   - Deploy intrusion detection systems
+- JWT Authentication: All API endpoints are protected with JWT token authentication
+- Role-Based Access Control: Different user roles (merchant/customer) have appropriate permissions
+- Input Validation: All user inputs are validated through serializers and form validation
+- CSRF Protection: Django's built-in CSRF protection for forms
+- Secure Password Storage: Passwords are hashed using Django's authentication system
+- Environment Variable Handling: Sensitive configuration is managed through environment variables
 
-7. **Input Validation**
-   - Strict validation of all input data
-   - Escaping all output to prevent XSS attacks
-   - Implementing CSRF protection
+### Production Security Enhancements
+For a production payment API, consider these additional security measures:
 
-8. **Secure Deployment**
-   - Use container security scanning
-   - Implement network segmentation
-   - Regular security audits and penetration testing
+- HTTPS Encryption: All API traffic should be encrypted with TLS/SSL
+- API Rate Limiting: Implement rate limiting to prevent abuse and DDoS attacks
+- Audit Logging: Comprehensive logging of all payment-related activities
+- PCI DSS Compliance: For real payment processing, comply with Payment Card Industry Data Security Standards
+- Multi-Factor Authentication: Implement MFA for merchant accounts
+- IP Whitelisting: Restrict access to sensitive endpoints by IP
+- Payment Tokenization: Use tokenization for sensitive payment information
+- Regular Security Audits: Conduct penetration testing and code reviews
+- Real-time Fraud Detection: Implement fraud detection algorithms for payment transactions
+- Data Retention Policies: Clear policies on storage and disposal of sensitive data
 
-9. **API Testing**
-   - Automated security testing in CI/CD pipeline
-   - Regular vulnerability scanning
+### Design Trade-offs
 
-## Trade-offs and Limitations
+- Simplified Payment Processing: This implementation uses a simplified payment process without integrating real payment gateways to focus on the core BNPL functionality.
+- Limited Validation Rules: The validation for payment plans and installments is basic and could be enhanced with more sophisticated business rules in a production environment.
+- In-memory Session Store: For simplicity, we're using Redis for session storage rather than implementing a more complex distributed session system.
+- Monolithic Architecture: The application is structured as a monolith for simplicity, though a microservices approach might be more appropriate for a production BNPL system.
+- Limited Customer Verification: A production BNPL system would require more robust KYC (Know Your Customer) verification processes.
 
-- **Payment Processing**: This is a simulator only and doesn't integrate with actual payment gateways.
-- **Date Validation**: Simplified date validation due to time constraints.
-- **Email Notifications**: Using mock emails rather than actual delivery service.
-- **Authentication**: Basic JWT authentication without refresh tokens or password reset functionality.
-- **Mobile Responsiveness**: The UI is functional on mobile but optimized for desktop.
-- **Analytics**: Basic analytics implementation focused on essential metrics.
-
-## Future Improvements
-
-- Integration with real payment gateways
-- Enhanced customer onboarding with KYC verification
-- Mobile application for customers
-- Advanced fraud detection system
-- Multi-language and currency support
-- Custom installment plans (uneven amounts, variable payment dates)
-- Merchant customer management system
+### License
+This project is licensed under the MIT License - see the LICENSE file for details.
