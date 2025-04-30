@@ -31,11 +31,8 @@ A Buy Now, Pay Later (BNPL) payment system that allows merchants to offer instal
     docker-compose up -d
     ```
 
-3. Set up the initial database and create a superuser:
+3. Create a superuser:
     ```bash
-    # Apply migrations
-    docker-compose exec backend python manage.py migrate
-
     # Create a superuser (admin)
     docker-compose exec backend python manage.py createsuperuser
     ```
